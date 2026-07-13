@@ -83,8 +83,3 @@ cd matchcast-frontend && bun run dev
 
 Buka `http://localhost:5173` di browser.
 
-## Status Project
-
-MVP dalam pengembangan. Fase terakhir yang selesai: **Fase 4 (Halaman Publik Turnamen)** — halaman publik `/t/[slug]` dengan polling otomatis dan token desain "Modern Esport Broadcast" sudah diterapkan.
-
-Fase development selengkapnya ada di [PRD.md](./PRD.md#mvp-development-plan-revisi) dan [AGENT-PROMPT-Turnamen.md](./AGENT-PROMPT-Turnamen.md).

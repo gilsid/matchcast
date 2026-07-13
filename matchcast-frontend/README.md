@@ -1,42 +1,67 @@
-# sv
+# matchcast-frontend
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+Frontend SvelteKit untuk platform manajemen turnamen olahraga. UI comp ready dengan shadcn-svelte + Tailwind.
 
-## Creating a project
+## Stack
 
-If you're seeing this, you've probably already done this step. Congrats!
+- **Framework:** SvelteKit 2
+- **CSS:** Tailwind CSS 4 + typography/forms plugin
+- **UI:** shadcn-svelte (button, card, input, label via class-variance-authority)
+- **Font:** Inter, JetBrains Mono, Oswald
+- **Ikon:** svelte-radix
+- **Lint/Format:** ESLint + Prettier
 
-```sh
-# create a new project
-npx sv create my-app
+## Struktur
+
+```
+src/
+├── app.html
+├── app.d.ts
+├── lib/
+│   ├── api/
+│   │   ├── auth.ts        # login/register API call
+│   │   ├── health.ts      # health check
+│   │   └── tournament.ts  # CRUD turnamen
+│   ├── components/ui/     # shadcn components
+│   ├── types/index.ts     # tipe bersama
+│   └── utils.ts           # cn() helper
+└── routes/
+    ├── +layout.svelte
+    ├── +page.svelte
+    ├── layout.css
+    ├── login/+page.svelte
+    ├── register/+page.svelte
+    ├── dashboard/+page.svelte
+    ├── tournaments/[id]/+page.svelte
+    └── t/[slug]/+page.svelte     # publik tournament page
 ```
 
-To recreate this project with the same configuration:
+## Halaman
 
-```sh
-# recreate this project
-bun x sv@0.16.2 create --template minimal --types ts --add prettier eslint tailwindcss="plugins:typography,forms" --install bun turnament-frontend
+| route | keterangan |
+|-------|-----------|
+| `/` | landing page |
+| `/login` | login form |
+| `/register` | register form |
+| `/dashboard` | daftar turnamen milik user |
+| `/tournaments/[id]` | detail/setting turnamen |
+| `/t/[slug]` | halaman publik turnamen |
+
+## Setup
+
+```bash
+bun install
+cp .env.example .env   # isi PUBLIC_API_URL
+bun run dev
 ```
 
-## Developing
+## Scripts
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-## Building
-
-To create a production version of your app:
-
-```sh
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+| perintah | keterangan |
+|---------|-----------|
+| `bun run dev` | dev server (vite) |
+| `bun run build` | build production |
+| `bun run preview` | preview build |
+| `bun run check` | typecheck svelte |
+| `bun run lint` | prettier + eslint |
+| `bun run format` | prettier --write |
