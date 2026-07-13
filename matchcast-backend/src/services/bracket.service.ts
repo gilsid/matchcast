@@ -1,0 +1,284 @@
+import { prisma } from "../prisma-client";
+
+export class BracketError extends Error {
+  constructor(
+    message: string,
+    public code: string,
+    public statusCode = 400,
+  ) {
+    super(message);
+  }
+}
+
+function nextPowerOf2(n: number): number {
+  let p = 1;
+  while (p < n) p <<= 1;
+  return p;
+}
+
+function shuffleArray<T>(array: T[]): T[] {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+interface TeamWithSeed {
+  id: string;
+  name: string;
+  seed: number;
+}
+
+export async function generateBracket(tournamentId: string, ownerId: string) {
+  const tournament = await prisma.tournament.findFirst({
+    where: { id: tournamentId, ownerId },
+    include: { teams: { orderBy: { id: "asc" } } },
+  });
+
+  if (!tournament) {
+    throw new BracketError("Tournament not found", "NOT_FOUND", 404);
+  }
+
+  if (tournament.teams.length < 2) {
+    throw new BracketError("Minimum 2 teams required", "NOT_ENOUGH_TEAMS", 400);
+  }
+
+  const existingMatches = await prisma.match.count({ where: { tournamentId } });
+  if (existingMatches > 0) {
+    throw new BracketError("Bracket already generated", "BRACKET_EXISTS", 409);
+  }
+
+  if (tournament.status !== "draft") {
+    throw new BracketError("Bracket can only be generated for draft tournaments", "INVALID_STATUS", 400);
+  }
+
+  // Shuffle teams for random seeding
+  const shuffledTeams = shuffleArray(tournament.teams);
+  const teamsWithSeed: TeamWithSeed[] = shuffledTeams.map((t, i) => ({
+    id: t.id,
+    name: t.name,
+    seed: i + 1,
+  }));
+
+  const n = teamsWithSeed.length;
+  const P = nextPowerOf2(n);
+  const byes = P - n;
+
+  // Teams with seeds 1..byes get bye to round 2
+  // Teams with seeds byes+1..n play in round 1
+  const round1Teams = teamsWithSeed.slice(byes);
+  const round1Matches = round1Teams.length / 2;
+  const totalRounds = Math.log2(P);
+
+  const matchesToCreate: Array<{
+    round: number;
+    matchOrder: number;
+    homeTeamId: string | null;
+    awayTeamId: string | null;
+    status: string;
+  }> = [];
+
+  // Round 1 matches
+  let matchOrder = 1;
+  for (let i = 0; i < round1Matches; i++) {
+    matchesToCreate.push({
+      round: 1,
+      matchOrder: matchOrder++,
+      homeTeamId: round1Teams[i * 2].id,
+      awayTeamId: round1Teams[i * 2 + 1].id,
+      status: "scheduled",
+    });
+  }
+
+  // Rounds 2..totalRounds
+  // Each round has half the matches of previous
+  let prevRoundMatches = round1Matches + byes; // number of "slots" in round 2
+  for (let r = 2; r <= totalRounds; r++) {
+    const matchesInRound = prevRoundMatches / 2;
+    matchOrder = 1;
+    for (let i = 0; i < matchesInRound; i++) {
+      matchesToCreate.push({
+        round: r,
+        matchOrder: matchOrder++,
+        homeTeamId: null,
+        awayTeamId: null,
+        status: "scheduled",
+      });
+    }
+    prevRoundMatches = matchesInRound;
+  }
+
+  // Create all matches in a transaction
+  const createdMatches = await prisma.$transaction(async (tx) => {
+    const created = [];
+    for (const m of matchesToCreate) {
+      const match = await tx.match.create({
+        data: {
+          tournamentId,
+          round: m.round,
+          matchOrder: m.matchOrder,
+          homeTeamId: m.homeTeamId,
+          awayTeamId: m.awayTeamId,
+          status: m.status,
+        },
+        include: { homeTeam: true, awayTeam: true },
+      });
+      created.push(match);
+    }
+    // Update tournament status to ongoing
+    await tx.tournament.update({
+      where: { id: tournamentId },
+      data: { status: "ongoing" },
+    });
+    return created;
+  });
+
+  return createdMatches;
+}
+
+export async function updateMatchScore(
+  matchId: string,
+  ownerId: string,
+  homeScore: number,
+  awayScore: number,
+) {
+  const match = await prisma.match.findUnique({
+    where: { id: matchId },
+    include: {
+      tournament: true,
+      homeTeam: true,
+      awayTeam: true,
+    },
+  });
+
+  if (!match) {
+    throw new BracketError("Match not found", "NOT_FOUND", 404);
+  }
+
+  if (match.tournament.ownerId !== ownerId) {
+    throw new BracketError("Not authorized", "UNAUTHORIZED", 403);
+  }
+
+  if (match.status === "finished") {
+    throw new BracketError("Match already finished", "ALREADY_FINISHED", 400);
+  }
+
+  if (homeScore < 0 || awayScore < 0) {
+    throw new BracketError("Scores cannot be negative", "VALIDATION_ERROR", 400);
+  }
+
+  if (homeScore === awayScore) {
+    throw new BracketError("Scores cannot be tied in knockout", "TIED_SCORE", 400);
+  }
+
+  const winnerTeamId = homeScore > awayScore ? match.homeTeamId : match.awayTeamId;
+  if (!winnerTeamId) {
+    throw new BracketError("Cannot determine winner: missing team", "MISSING_TEAM", 400);
+  }
+
+  // Update match with score and winner
+  const updatedMatch = await prisma.match.update({
+    where: { id: matchId },
+    data: {
+      homeScore,
+      awayScore,
+      winnerTeamId,
+      status: "finished",
+    },
+    include: { homeTeam: true, awayTeam: true, winnerTeam: true },
+  });
+
+  // Propagate winner to next round
+  await propagateWinner(match.tournamentId, match.round, match.matchOrder, winnerTeamId);
+
+  // Check if tournament is finished (final match done)
+  const finalMatch = await prisma.match.findFirst({
+    where: { tournamentId: match.tournamentId },
+    orderBy: { round: "desc" },
+  });
+  if (finalMatch && finalMatch.status === "finished") {
+    await prisma.tournament.update({
+      where: { id: match.tournamentId },
+      data: { status: "finished" },
+    });
+  }
+
+  return updatedMatch;
+}
+
+async function propagateWinner(
+  tournamentId: string,
+  currentRound: number,
+  currentMatchOrder: number,
+  winnerTeamId: string,
+) {
+  const nextRound = currentRound + 1;
+  // Next round match order: ceil(currentMatchOrder / 2)
+  const nextMatchOrder = Math.ceil(currentMatchOrder / 2);
+
+  // In the next round match, winner becomes home if currentMatchOrder is odd, away if even
+  const isHome = currentMatchOrder % 2 === 1;
+
+  const nextMatch = await prisma.match.findFirst({
+    where: {
+      tournamentId,
+      round: nextRound,
+      matchOrder: nextMatchOrder,
+    },
+  });
+
+  if (!nextMatch) return; // No next round match (this was the final)
+
+  if (isHome) {
+    // Winner goes to home slot if empty, else away
+    if (nextMatch.homeTeamId === null) {
+      await prisma.match.update({
+        where: { id: nextMatch.id },
+        data: { homeTeamId: winnerTeamId },
+      });
+    } else if (nextMatch.awayTeamId === null) {
+      await prisma.match.update({
+        where: { id: nextMatch.id },
+        data: { awayTeamId: winnerTeamId },
+      });
+    }
+  } else {
+    // Winner goes to away slot if empty, else home
+    if (nextMatch.awayTeamId === null) {
+      await prisma.match.update({
+        where: { id: nextMatch.id },
+        data: { awayTeamId: winnerTeamId },
+      });
+    } else if (nextMatch.homeTeamId === null) {
+      await prisma.match.update({
+        where: { id: nextMatch.id },
+        data: { homeTeamId: winnerTeamId },
+      });
+    }
+  }
+
+  // If both teams now filled and status was scheduled, keep as scheduled (will be played)
+}
+
+export async function getPublicMatches(slug: string) {
+  const tournament = await prisma.tournament.findUnique({
+    where: { slug },
+    select: { id: true, status: true },
+  });
+
+  if (!tournament) {
+    throw new BracketError("Tournament not found", "NOT_FOUND", 404);
+  }
+
+  return prisma.match.findMany({
+    where: { tournamentId: tournament.id },
+    orderBy: [{ round: "asc" }, { matchOrder: "asc" }],
+    include: {
+      homeTeam: { select: { id: true, name: true } },
+      awayTeam: { select: { id: true, name: true } },
+      winnerTeam: { select: { id: true, name: true } },
+    },
+  });
+}
