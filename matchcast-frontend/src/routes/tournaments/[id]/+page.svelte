@@ -14,6 +14,7 @@
     type Match,
   } from "$lib/api/tournament";
   import ScoreModal from "$lib/components/ui/score-modal.svelte";
+  import Bracket from "$lib/components/ui/bracket.svelte";
 
   const id = $derived(page.params.id);
 
@@ -80,15 +81,6 @@
     } finally {
       generating = false;
     }
-  }
-
-  function groupByRound(matches: Match[]) {
-    const rounds = new Map<number, Match[]>();
-    for (const m of matches) {
-      if (!rounds.has(m.round)) rounds.set(m.round, []);
-      rounds.get(m.round)!.push(m);
-    }
-    return Array.from(rounds.entries()).sort((a, b) => a[0] - b[0]);
   }
 
   async function handleStartMatch(matchId: string) {
@@ -178,65 +170,15 @@
         </div>
       {/if}
     {:else}
-      <div class="mt-6 space-y-6">
+      <div class="mt-6">
         <h2 class="font-display text-xl font-bold uppercase tracking-wide">Bracket</h2>
-        {#each groupByRound(tournament.matches) as [round, matches]}
-          <div class="space-y-2">
-            <div class="bg-bg-surface clipped-sm inline-block border border-border-subtle px-3 py-1">
-              <span class="font-mono text-text-muted text-xs uppercase tracking-wider">Babak {round}</span>
-            </div>
-            <div class="space-y-2">
-              {#each matches as match}
-                <div class="bg-bg-surface clipped border border-border-subtle p-3 sm:p-4">
-                  <div class="flex items-center justify-center gap-2 sm:gap-3">
-                    <div class="min-w-0 flex-1 text-right">
-                      {#if match.homeTeam}
-                        <p class="font-display truncate text-sm font-bold uppercase tracking-wide sm:text-base">{match.homeTeam.name}</p>
-                      {:else}
-                        <p class="text-text-muted font-mono text-xs">(Menunggu)</p>
-                      {/if}
-                      {#if match.homeScore !== null}
-                        <p class="scoreboard-font mt-1 text-xl sm:text-2xl {match.winnerTeamId === match.homeTeamId ? 'text-accent-primary' : 'text-text-muted'}">{match.homeScore}</p>
-                      {/if}
-                    </div>
-
-                    <div class="flex-shrink-0 text-center">
-                      {#if match.status === "finished" && match.winnerTeam}
-                        <p class="text-text-muted font-mono text-xs">Selesai</p>
-                        <p class="font-mono text-[10px] text-accent-primary uppercase tracking-wider">Winner</p>
-                      {:else if match.status === "ongoing" && match.homeTeam && match.awayTeam}
-                        <button onclick={() => { scoreMatch = match; showScoreModal = true; }}
-                          class="clipped-sm bg-accent-primary px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white hover:bg-accent-primary/90">
-                          Isi Skor
-                        </button>
-                        <div class="live-badge mt-1 inline-block">Live</div>
-                      {:else if match.status === "scheduled" && match.homeTeam && match.awayTeam}
-                        <button onclick={() => handleStartMatch(match.id)}
-                          class="clipped-sm border border-accent-primary px-3 py-1 text-xs font-semibold uppercase tracking-wider text-accent-primary hover:bg-accent-primary/10">
-                          Mulai
-                        </button>
-                      {:else}
-                        <p class="text-text-muted font-mono text-xs">Menunggu</p>
-                      {/if}
-                      <p class="text-text-muted mt-1 font-mono text-[10px] uppercase tracking-wider">R{round}·M{String(match.matchOrder).padStart(2, "0")}</p>
-                    </div>
-
-                    <div class="min-w-0 flex-1">
-                      {#if match.awayTeam}
-                        <p class="font-display truncate text-sm font-bold uppercase tracking-wide sm:text-base">{match.awayTeam.name}</p>
-                      {:else}
-                        <p class="text-text-muted font-mono text-xs">(Menunggu)</p>
-                      {/if}
-                      {#if match.awayScore !== null}
-                        <p class="scoreboard-font mt-1 text-xl sm:text-2xl {match.winnerTeamId === match.awayTeamId ? 'text-accent-primary' : 'text-text-muted'}">{match.awayScore}</p>
-                      {/if}
-                    </div>
-                  </div>
-                </div>
-              {/each}
-            </div>
-          </div>
-        {/each}
+        <Bracket
+          matches={tournament.matches}
+          admin={true}
+          onstart={handleStartMatch}
+          onscore={(m) => { scoreMatch = m; showScoreModal = true; }}
+          clazz="mt-4"
+        />
       </div>
     {/if}
   {/if}

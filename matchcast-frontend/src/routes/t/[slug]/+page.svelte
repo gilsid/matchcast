@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
   import { page } from "$app/state";
-  import { getPublicTournament, type Tournament, type Match } from "$lib/api/tournament";
+  import { getPublicTournament } from "$lib/api/tournament";
+  import Bracket from "$lib/components/ui/bracket.svelte";
 
   const slug = $derived(page.params.slug);
 
@@ -18,15 +19,6 @@
     } finally {
       loading = false;
     }
-  }
-
-  function groupByRound(matches: Match[]) {
-    const rounds = new Map<number, Match[]>();
-    for (const m of matches) {
-      if (!rounds.has(m.round)) rounds.set(m.round, []);
-      rounds.get(m.round)!.push(m);
-    }
-    return Array.from(rounds.entries()).sort((a, b) => a[0] - b[0]);
   }
 
   onMount(() => {
@@ -58,59 +50,7 @@
     </div>
 
     {#if tournament.matches && tournament.matches.length > 0}
-      <div class="space-y-6">
-        {#each groupByRound(tournament.matches) as [round, matches]}
-          <div>
-            <div class="bg-bg-surface clipped mb-3 inline-block px-3 py-1">
-              <span class="font-mono text-text-muted text-xs tracking-wider uppercase">Babak {round}</span>
-            </div>
-            <div class="space-y-2">
-              {#each matches as match}
-                <div class="bg-bg-surface clipped relative border border-border-subtle p-3 sm:p-4">
-                  <div class="flex items-center justify-center gap-2 sm:gap-3">
-                    <div class="min-w-0 flex-1 text-right">
-                      <p class="font-display truncate text-base font-bold uppercase tracking-wide sm:text-lg">
-                        {match.homeTeam?.name ?? "?"}
-                      </p>
-                      {#if match.homeScore !== null}
-                        <p class="scoreboard-font mt-1 text-2xl sm:text-3xl {match.winnerTeamId === match.homeTeamId ? 'text-accent-primary' : 'text-text-muted'}">
-                          {match.homeScore}
-                        </p>
-                      {/if}
-                    </div>
-
-                    <div class="flex-shrink-0 text-center">
-                      {#if match.status === "ongoing"}
-                        <div class="live-badge">Live</div>
-                      {:else if match.status === "finished"}
-                        <p class="text-text-muted font-mono text-xs">Selesai</p>
-                      {:else}
-                        <p class="text-text-muted font-mono text-xs tracking-wider uppercase">vs</p>
-                      {/if}
-                      <div class="mt-1">
-                        <span class="font-mono text-text-muted text-[10px] tracking-wider uppercase">
-                          R{round}·M{String(match.matchOrder).padStart(2, "0")}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div class="min-w-0 flex-1">
-                      <p class="font-display truncate text-base font-bold uppercase tracking-wide sm:text-lg">
-                        {match.awayTeam?.name ?? "?"}
-                      </p>
-                      {#if match.awayScore !== null}
-                        <p class="scoreboard-font mt-1 text-2xl sm:text-3xl {match.winnerTeamId === match.awayTeamId ? 'text-accent-primary' : 'text-text-muted'}">
-                          {match.awayScore}
-                        </p>
-                      {/if}
-                    </div>
-                  </div>
-                </div>
-              {/each}
-            </div>
-          </div>
-        {/each}
-      </div>
+      <Bracket matches={tournament.matches} clazz="mt-2" />
     {:else}
       <p class="text-text-muted py-8 text-center">Belum ada pertandingan. Bracket belum di-generate.</p>
     {/if}
