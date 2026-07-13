@@ -80,7 +80,7 @@
                     </div>
 
                     <div class="flex-shrink-0 text-center">
-                      {#if match.status === "live"}
+                      {#if match.status === "ongoing"}
                         <div class="live-badge">Live</div>
                       {:else if match.status === "finished"}
                         <p class="text-text-muted font-mono text-xs">Selesai</p>

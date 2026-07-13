@@ -96,6 +96,23 @@ export const tournamentRoutes: FastifyPluginAsync<{ requireAuth: (req: FastifyRe
     }
   });
 
+  app.patch("/matches/:id/start", { onRequest: [auth] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    try {
+      const match = await bracketService.startMatch(id, request.userId);
+      reply.send({ success: true, data: match });
+    } catch (err) {
+      if (err instanceof bracketService.BracketError) {
+        reply.code(err.statusCode).send({
+          success: false,
+          error: { message: err.message, code: err.code },
+        });
+        return;
+      }
+      throw err;
+    }
+  });
+
   app.patch("/matches/:id/score", { onRequest: [auth] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const body = request.body as { homeScore?: number; awayScore?: number };

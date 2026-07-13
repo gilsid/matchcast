@@ -3,3 +3,12 @@
 
 # Log files
 *.log
+
+# Playwright
+matchcast-backend/test-results/
+matchcast-backend/playwright-report/
+
+# Project docs (internal, not for public)
+PRD.md
+AGENT-PROMPT-Turnamen.md
+PROMPT-*.md

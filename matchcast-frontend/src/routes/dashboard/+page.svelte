@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import { listTournaments, createTournament, type Tournament } from "$lib/api/tournament";
+  import { listTournaments, createTournament, AuthError, type Tournament } from "$lib/api/tournament";
 
   let tournaments = $state<Tournament[]>([]);
   let loading = $state(true);
@@ -18,6 +18,7 @@
     try {
       tournaments = await listTournaments();
     } catch (e) {
+      if (e instanceof AuthError) { goto("/login"); return; }
       error = e instanceof Error ? e.message : "Gagal memuat data";
     } finally {
       loading = false;

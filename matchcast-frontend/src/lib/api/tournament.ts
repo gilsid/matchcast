@@ -1,5 +1,14 @@
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
+export class AuthError extends Error {
+  constructor(
+    message: string,
+    public code: string,
+  ) {
+    super(message);
+  }
+}
+
 interface ApiSuccess<T> {
   success: true;
   data: T;
@@ -53,7 +62,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     credentials: "include",
   });
   const data = (await res.json()) as ApiResult<T>;
-  if (!data.success) throw new Error(data.error.message);
+  if (!data.success) {
+    const msg = data.error?.message || "Request failed";
+    const code = data.error?.code || "UNKNOWN";
+    if (code === "UNAUTHORIZED" || code === "INVALID_TOKEN") {
+      throw new AuthError(msg, code);
+    }
+    throw new Error(msg);
+  }
   return data.data;
 }
 
@@ -89,6 +105,13 @@ export function deleteTeam(tournamentId: string, teamId: string) {
 export function generateBracket(tournamentId: string) {
   return request<Match[]>(`/tournaments/${tournamentId}/generate-bracket`, {
     method: "POST",
+  });
+}
+
+export function startMatch(matchId: string) {
+  return request<Match>(`/matches/${matchId}/start`, {
+    method: "PATCH",
+    body: JSON.stringify({}),
   });
 }
 

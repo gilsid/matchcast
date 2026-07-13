@@ -7,10 +7,13 @@
     addTeam,
     deleteTeam,
     generateBracket,
+    startMatch,
     updateMatchScore,
+    AuthError,
     type Tournament,
     type Match,
   } from "$lib/api/tournament";
+  import ScoreModal from "$lib/components/ui/score-modal.svelte";
 
   const id = $derived(page.params.id);
 
@@ -25,6 +28,9 @@
   let generating = $state(false);
   let bracketGenerated = $state(false);
 
+  let scoreMatch = $state<Match | null>(null);
+  let showScoreModal = $state(false);
+
   async function load() {
     loading = true;
     error = "";
@@ -32,6 +38,7 @@
       tournament = await getTournament(id);
       bracketGenerated = tournament.status !== "draft";
     } catch (e) {
+      if (e instanceof AuthError) { goto("/login"); return; }
       error = e instanceof Error ? e.message : "Gagal memuat turnamen";
     } finally {
       loading = false;
@@ -82,6 +89,15 @@
       rounds.get(m.round)!.push(m);
     }
     return Array.from(rounds.entries()).sort((a, b) => a[0] - b[0]);
+  }
+
+  async function handleStartMatch(matchId: string) {
+    try {
+      await startMatch(matchId);
+      await load();
+    } catch (e) {
+      error = e instanceof Error ? e.message : "Gagal mulai pertandingan";
+    }
   }
 
   async function handleScore(match: Match, homeScore: number, awayScore: number) {
@@ -188,14 +204,16 @@
                       {#if match.status === "finished" && match.winnerTeam}
                         <p class="text-text-muted font-mono text-xs">Selesai</p>
                         <p class="font-mono text-[10px] text-accent-primary uppercase tracking-wider">Winner</p>
-                      {:else if match.homeTeam && match.awayTeam}
-                        <button onclick={() => {
-                          const h = parseInt(prompt(`Skor ${match.homeTeam?.name} (home):`) ?? "0");
-                          const a = parseInt(prompt(`Skor ${match.awayTeam?.name} (away):`) ?? "0");
-                          if (!isNaN(h) && !isNaN(a)) handleScore(match, h, a);
-                        }}
+                      {:else if match.status === "ongoing" && match.homeTeam && match.awayTeam}
+                        <button onclick={() => { scoreMatch = match; showScoreModal = true; }}
                           class="clipped-sm bg-accent-primary px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white hover:bg-accent-primary/90">
                           Isi Skor
+                        </button>
+                        <div class="live-badge mt-1 inline-block">Live</div>
+                      {:else if match.status === "scheduled" && match.homeTeam && match.awayTeam}
+                        <button onclick={() => handleStartMatch(match.id)}
+                          class="clipped-sm border border-accent-primary px-3 py-1 text-xs font-semibold uppercase tracking-wider text-accent-primary hover:bg-accent-primary/10">
+                          Mulai
                         </button>
                       {:else}
                         <p class="text-text-muted font-mono text-xs">Menunggu</p>
@@ -221,5 +239,14 @@
         {/each}
       </div>
     {/if}
+  {/if}
+
+  {#if scoreMatch}
+    <ScoreModal
+      match={scoreMatch}
+      open={showScoreModal}
+      onsubmit={(h, a) => { showScoreModal = false; handleScore(scoreMatch, h, a); }}
+      onclose={() => { showScoreModal = false; scoreMatch = null; }}
+    />
   {/if}
 </div>

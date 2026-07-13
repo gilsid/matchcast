@@ -93,19 +93,52 @@ export async function generateBracket(tournamentId: string, ownerId: string) {
   }
 
   // Rounds 2..totalRounds
-  // Each round has half the matches of previous
-  let prevRoundMatches = round1Matches + byes; // number of "slots" in round 2
+  let prevRoundMatches = round1Matches + byes;
   for (let r = 2; r <= totalRounds; r++) {
     const matchesInRound = prevRoundMatches / 2;
     matchOrder = 1;
+
+    // Round 2: compute which slots propagateWinner will fill from R1 matches
+    const propagateSlots = new Set<number>();
+    if (r === 2 && round1Matches > 0) {
+      for (let m = 1; m <= round1Matches; m++) {
+        const r2MatchIdx = Math.ceil(m / 2) - 1;
+        const isHome = m % 2 === 1;
+        propagateSlots.add(r2MatchIdx * 2 + (isHome ? 0 : 1));
+      }
+    }
+
+    const byeTeams = r === 2 ? teamsWithSeed.slice(0, byes) : [];
+    let byeIdx = 0;
+
     for (let i = 0; i < matchesInRound; i++) {
-      matchesToCreate.push({
+      const match: {
+        round: number;
+        matchOrder: number;
+        homeTeamId: string | null;
+        awayTeamId: string | null;
+        status: string;
+      } = {
         round: r,
         matchOrder: matchOrder++,
         homeTeamId: null,
         awayTeamId: null,
         status: "scheduled",
-      });
+      };
+
+      // Place bye teams into round 2 slots NOT reserved for propagate
+      if (r === 2 && byes > 0) {
+        const homeSlot = i * 2;
+        const awaySlot = i * 2 + 1;
+        if (byeIdx < byes && !propagateSlots.has(homeSlot)) {
+          match.homeTeamId = byeTeams[byeIdx++].id;
+        }
+        if (byeIdx < byes && !propagateSlots.has(awaySlot)) {
+          match.awayTeamId = byeTeams[byeIdx++].id;
+        }
+      }
+
+      matchesToCreate.push(match);
     }
     prevRoundMatches = matchesInRound;
   }
@@ -136,6 +169,34 @@ export async function generateBracket(tournamentId: string, ownerId: string) {
   });
 
   return createdMatches;
+}
+
+export async function startMatch(matchId: string, ownerId: string) {
+  const match = await prisma.match.findUnique({
+    where: { id: matchId },
+    include: { tournament: true },
+  });
+
+  if (!match) {
+    throw new BracketError("Match not found", "NOT_FOUND", 404);
+  }
+
+  if (match.tournament.ownerId !== ownerId) {
+    throw new BracketError("Not authorized", "UNAUTHORIZED", 403);
+  }
+
+  if (match.status !== "scheduled") {
+    throw new BracketError("Match already started or finished", "INVALID_STATUS", 400);
+  }
+
+  if (!match.homeTeamId || !match.awayTeamId) {
+    throw new BracketError("Both teams must be assigned before starting", "MISSING_TEAMS", 400);
+  }
+
+  return prisma.match.update({
+    where: { id: matchId },
+    data: { status: "ongoing" },
+  });
 }
 
 export async function updateMatchScore(

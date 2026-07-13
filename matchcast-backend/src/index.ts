@@ -11,8 +11,17 @@ import { makeOnRequestAuth } from "./plugins/auth";
 const app = Fastify({ logger: true });
 
 await app.register(fcookie);
+const jwtSecret = process.env["JWT_SECRET"] || "dev-secret-change-in-production";
+if (process.env["NODE_ENV"] === "production" && (!process.env["JWT_SECRET"] || jwtSecret === "dev-secret-change-in-production")) {
+  console.error("FATAL: JWT_SECRET must be set in production");
+  process.exit(1);
+}
+if (process.env["NODE_ENV"] !== "production") {
+  console.warn("WARN: using default JWT_SECRET for development");
+}
+
 await app.register(fjwt, {
-  secret: process.env["JWT_SECRET"] || "dev-secret-change-in-production",
+  secret: jwtSecret,
   cookie: { cookieName: "token" },
 });
 
