@@ -1,16 +1,4 @@
-import { test as base } from "@playwright/test";
 import type { APIRequestContext } from "@playwright/test";
-
-interface TestUser {
-  email: string;
-  password: string;
-  name: string;
-}
-
-interface AuthData {
-  userId: string;
-  token: string;
-}
 
 interface TeamData {
   id: string;
@@ -120,29 +108,4 @@ export async function generateBracket(
   return body.data;
 }
 
-export async function getMatches(
-  request: APIRequestContext,
-  tournamentId: string,
-): Promise<MatchData[]> {
-  const res = await request.get(`/tournaments/${tournamentId}`, {
-    headers: {
-      Authorization: `Bearer ${Math.random().toString()}`, // won't work, let's handle
-    },
-  });
-  // Actually for getting matches we need auth. Let's use a different approach.
-  const body = await res.json();
-  return body.data?.matches || [];
-}
 
-export function setupTest(request: APIRequestContext, token: string) {
-  const authHeader = { Authorization: `Bearer ${token}` };
-
-  return {
-    createTournament: (name: string) =>
-      createTournament(request, token, name),
-    addTeam: (tournamentId: string, teamName: string) =>
-      addTeam(request, token, tournamentId, teamName),
-    generateBracket: (tournamentId: string) =>
-      generateBracket(request, token, tournamentId),
-  };
-}
