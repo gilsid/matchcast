@@ -142,3 +142,13 @@ bunx prisma studio        # GUI database
 5. **Git:** jangan commit dengan `-A`. Staging hanya file yang sengaja diubah.
 6. **Scope:** jangan implementasi fitur di luar yang diminta.
 7. **Keamanan:** production tanpa `JWT_SECRET` → fatal error + exit. Input di-trim dan divalidasi (email regex, max length, integer non-negatif untuk skor). Rate limit auth 5/m/IP.
+
+## 10. Prisma Atomic Patterns
+
+- **updateMany with where guard:** prefer `updateMany({ where: { id, status: "X" }, data: { status: "Y" } })` over `findUnique`+check+`update` — race-safe
+- **$transaction for multi-step writes:** score + propagateWinner + finish check in one `$transaction`; pass `tx: Prisma.TransactionClient` to helpers
+- **TransactionClient type:** `import type { Prisma } from "../generated/prisma/client"` → `Prisma.TransactionClient`
+- **Neon migrations:** `DATABASE_URL_UNPOOLED` (direct, non-pooled) required for `directUrl` in schema — migrations fail with pooled URL
+- **Match state machine:** `scheduled → ongoing → finished`. Score endpoint gates on `"ongoing"`, not `{ not: "finished" }`
+- **APIResponse cookie extraction:** use `res.headersArray().filter(h => h.name === "set-cookie")` — `headerValues()` doesn't exist on `APIRequestContext` responses
+- **Race test pattern:** `Promise.allSettled` → filter by status code → assert `successCount === 1, failCount === N-1`
