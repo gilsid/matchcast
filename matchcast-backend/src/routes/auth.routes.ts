@@ -1,7 +1,18 @@
 import type { FastifyPluginAsync } from "fastify";
+import rateLimit from "@fastify/rate-limit";
 import * as authService from "../services/auth.service";
 
 export const authRoutes: FastifyPluginAsync = async (app) => {
+  await app.register(rateLimit, {
+    max: parseInt(process.env["AUTH_RATE_LIMIT"] || "5", 10),
+    timeWindow: "1 minute",
+    keyGenerator: (req) => req.ip,
+    errorResponseBuilder: () => ({
+      success: false,
+      error: { message: "Terlalu banyak percobaan. Coba lagi dalam 1 menit.", code: "RATE_LIMITED" },
+    }),
+  });
+
   app.post("/auth/register", async (request, reply) => {
     const { email, password, name } = request.body as {
       email: string;
@@ -9,10 +20,29 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       name: string;
     };
 
-    if (!email || !password || !name) {
+    const trimmedEmail = email?.trim() ?? "";
+    const trimmedName = name?.trim() ?? "";
+
+    if (!trimmedEmail || !password || !trimmedName) {
       reply.code(400).send({
         success: false,
         error: { message: "Email, password, and name are required", code: "VALIDATION_ERROR" },
+      });
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      reply.code(400).send({
+        success: false,
+        error: { message: "Format email tidak valid", code: "VALIDATION_ERROR" },
+      });
+      return;
+    }
+
+    if (trimmedEmail.length > 254 || trimmedName.length > 100) {
+      reply.code(400).send({
+        success: false,
+        error: { message: "Email atau nama terlalu panjang", code: "VALIDATION_ERROR" },
       });
       return;
     }
@@ -26,7 +56,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     }
 
     try {
-      const user = await authService.register(email, password, name);
+      const user = await authService.register(trimmedEmail, password, trimmedName);
       reply.code(201).send({ success: true, data: user });
     } catch (err) {
       if (err instanceof authService.AuthError) {
@@ -46,7 +76,9 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       password: string;
     };
 
-    if (!email || !password) {
+    const trimmedEmail = email?.trim() ?? "";
+
+    if (!trimmedEmail || !password) {
       reply.code(400).send({
         success: false,
         error: { message: "Email and password are required", code: "VALIDATION_ERROR" },
@@ -55,7 +87,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     }
 
     try {
-      const user = await authService.login(email, password);
+      const user = await authService.login(trimmedEmail, password);
       const token = app.jwt.sign({ id: user.id }, { expiresIn: "7d" });
 
       reply.setCookie("token", token, {

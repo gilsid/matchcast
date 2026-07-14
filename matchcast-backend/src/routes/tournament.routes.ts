@@ -7,8 +7,16 @@ export const tournamentRoutes: FastifyPluginAsync<{ requireAuth: (req: FastifyRe
 
   app.post("/tournaments", { onRequest: [auth] }, async (request, reply) => {
     const body = request.body as { name?: string; sport?: string; format?: string };
+    const name = body.name?.trim() ?? "";
+    if (name.length > 100) {
+      reply.code(400).send({
+        success: false,
+        error: { message: "Nama turnamen maksimal 100 karakter", code: "VALIDATION_ERROR" },
+      });
+      return;
+    }
     try {
-      const tournament = await tournamentService.createTournament(request.userId, body);
+      const tournament = await tournamentService.createTournament(request.userId, { ...body, name });
       reply.code(201).send({ success: true, data: tournament });
     } catch (err) {
       if (err instanceof tournamentService.TournamentError) {
@@ -47,8 +55,16 @@ export const tournamentRoutes: FastifyPluginAsync<{ requireAuth: (req: FastifyRe
   app.post("/tournaments/:id/teams", { onRequest: [auth] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const body = request.body as { name?: string };
+    const teamName = body.name?.trim() ?? "";
+    if (teamName.length > 50) {
+      reply.code(400).send({
+        success: false,
+        error: { message: "Nama tim maksimal 50 karakter", code: "VALIDATION_ERROR" },
+      });
+      return;
+    }
     try {
-      const team = await tournamentService.addTeam(id, request.userId, body.name ?? "");
+      const team = await tournamentService.addTeam(id, request.userId, teamName);
       reply.code(201).send({ success: true, data: team });
     } catch (err) {
       if (err instanceof tournamentService.TournamentError) {

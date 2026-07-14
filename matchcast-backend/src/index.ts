@@ -37,6 +37,18 @@ await app.register(authRoutes, { prefix: "" });
 await app.register(tournamentRoutes, { prefix: "", requireAuth });
 await app.register(publicRoutes);
 
+app.setErrorHandler((err, request, reply) => {
+  app.log.error({ err, url: request.url, method: request.method }, "Unhandled error");
+  const statusCode = (err as any).statusCode ?? 500;
+  reply.code(statusCode).send({
+    success: false,
+    error: {
+      message: statusCode === 429 ? "Terlalu banyak permintaan." : "Terjadi kesalahan, coba lagi nanti.",
+      code: statusCode === 429 ? "RATE_LIMITED" : "INTERNAL_ERROR",
+    },
+  });
+});
+
 const port = parseInt(process.env["PORT"] || "3001", 10);
 
 try {

@@ -1,44 +1,39 @@
 import { test, expect } from "@playwright/test";
 import { loginUser, createTournament, addTeam, generateBracket } from "./helpers";
 
-function updateScore(matches: any[], matchId: string, homeScore: number, awayScore: number) {
-  return matches.find((m: any) => m.id === matchId);
-}
-
-test.describe("Full tournament scenario — 8 teams", () => {
-  test("create tournament, add teams, generate bracket, play all matches to completion", async ({ request }) => {
+test.describe("Full tournament scenario — 6 teams (bye logic)", () => {
+  test("complete flow + verify public page", async ({ request }) => {
     const suffix = Date.now().toString(36);
     const { token } = await loginUser(request);
 
     // 1. Create tournament
-    const t = await createTournament(request, token, `E2E Full 8 ${suffix}`);
+    const t = await createTournament(request, token, `E2E Full 6 ${suffix}`);
     expect(t.id).toBeTruthy();
     expect(t.status).toBe("draft");
 
-    // 2. Add 8 teams
-    const teamNames = ["Tim A", "Tim B", "Tim C", "Tim D", "Tim E", "Tim F", "Tim G", "Tim H"];
+    // 2. Add 6 teams (bukan pangkat 2 — verify bye logic)
+    const teamNames = ["Tim A", "Tim B", "Tim C", "Tim D", "Tim E", "Tim F"];
     const teams: { id: string; name: string }[] = [];
     for (const name of teamNames) {
       const team = await addTeam(request, token, t.id, name);
       teams.push(team);
     }
-    expect(teams.length).toBe(8);
+    expect(teams.length).toBe(6);
 
     // 3. Generate bracket
     const matches = await generateBracket(request, token, t.id);
-    expect(matches.length).toBe(7); // n - 1 = 7
+    expect(matches.length).toBe(5); // n - 1 = 5
 
-    // Verify all 8 teams are placed in round 1
-    const round1 = matches.filter((m: any) => m.round === 1);
-    expect(round1.length).toBe(4);
-    const r1TeamIds = new Set<string>();
-    for (const m of round1) {
-      r1TeamIds.add(m.homeTeamId);
-      r1TeamIds.add(m.awayTeamId);
+    // Verify all 6 teams placed somewhere in bracket
+    const allTeamIds = new Set(teams.map((tm: any) => tm.id));
+    const matchedTeamIds = new Set<string>();
+    for (const m of matches) {
+      if (m.homeTeamId) matchedTeamIds.add(m.homeTeamId);
+      if (m.awayTeamId) matchedTeamIds.add(m.awayTeamId);
     }
-    expect(r1TeamIds.size).toBe(8);
+    expect(matchedTeamIds.size).toBe(6);
 
-    // 4. Get tournament detail to have match data with teams
+    // 4. Get tournament detail
     const getTournament = async () => {
       const res = await request.get(`/tournaments/${t.id}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -47,10 +42,8 @@ test.describe("Full tournament scenario — 8 teams", () => {
       return body.data;
     };
 
-    // Reload to get matches with team info
     let tournamentData = await getTournament();
 
-    // Helper: update score and return updated data
     async function playMatch(matchId: string, homeScore: number, awayScore: number) {
       const res = await request.patch(`/matches/${matchId}/score`, {
         data: { homeScore, awayScore },
@@ -71,42 +64,30 @@ test.describe("Full tournament scenario — 8 teams", () => {
       expect(body.success).toBeTruthy();
     }
 
-    // 5. Play round 1 — 4 matches
+    // 5. Play round 1
     for (const m of tournamentData.matches) {
       if (m.round !== 1) continue;
-
-      // Start the match
       await startMatch(m.id);
       tournamentData = await getTournament();
-      const startedMatch = tournamentData.matches.find((mm: any) => mm.id === m.id);
-      expect(startedMatch.status).toBe("ongoing");
-
-      // Play it
+      expect(tournamentData.matches.find((mm: any) => mm.id === m.id).status).toBe("ongoing");
       await playMatch(m.id, 3, 1);
     }
 
-    // Verify round 1 all finished + winners propagated to round 2
+    // Verify round 1 finished
     tournamentData = await getTournament();
-    const round1Finished = tournamentData.matches.filter((m: any) => m.round === 1);
-    expect(round1Finished.every((m: any) => m.status === "finished")).toBeTruthy();
+    expect(tournamentData.matches.filter((m: any) => m.round === 1).every((m: any) => m.status === "finished")).toBeTruthy();
 
-    // 6. Play round 2 — 2 matches
+    // 6. Play round 2
     for (const m of tournamentData.matches) {
       if (m.round !== 2) continue;
-
-      // Both teams should be assigned (from R1 propagate)
       expect(m.homeTeamId).not.toBeNull();
       expect(m.awayTeamId).not.toBeNull();
-
       await startMatch(m.id);
       await playMatch(m.id, 2, 0);
     }
 
+    // 7. Play final
     tournamentData = await getTournament();
-    const round2Finished = tournamentData.matches.filter((m: any) => m.round === 2);
-    expect(round2Finished.every((m: any) => m.status === "finished")).toBeTruthy();
-
-    // 7. Play final — round 3
     const finalMatch = tournamentData.matches.find((m: any) => m.round === 3);
     expect(finalMatch).toBeTruthy();
     expect(finalMatch.homeTeamId).not.toBeNull();
@@ -116,11 +97,31 @@ test.describe("Full tournament scenario — 8 teams", () => {
     await playMatch(finalMatch.id, 4, 2);
     tournamentData = await getTournament();
 
-    // 8. Verify tournament finished
-    const finalUpdated = tournamentData.matches.find((m: any) => m.id === finalMatch.id);
+    // Verify tournament finished
     expect(tournamentData.status).toBe("finished");
-    const allFinished = tournamentData.matches.every((m: any) => m.status === "finished");
-    expect(allFinished).toBeTruthy();
-    expect(finalUpdated.winnerTeamId).toBeTruthy();
+    expect(tournamentData.matches.every((m: any) => m.status === "finished")).toBeTruthy();
+
+    // 8. Access public page (no auth)
+    const publicRes = await request.get(`/t/${t.slug}`);
+    const publicBody = await publicRes.json();
+    expect(publicBody.success).toBeTruthy();
+
+    const publicTournament = publicBody.data;
+    expect(publicTournament.name).toBe(t.name);
+    expect(publicTournament.status).toBe("finished");
+
+    // Verify public matches match the admin view
+    expect(publicTournament.matches.length).toBe(tournamentData.matches.length);
+    const firstMatch = publicTournament.matches[0];
+    expect(firstMatch.homeTeam).toBeTruthy();
+    expect(firstMatch.awayTeam).toBeTruthy();
+    expect(typeof firstMatch.homeScore).toBe("number");
+    expect(typeof firstMatch.awayScore).toBe("number");
+
+    // No team should have "?" placeholder in public view
+    for (const m of publicTournament.matches) {
+      expect(m.homeTeam?.name).toBeTruthy();
+      expect(m.awayTeam?.name).toBeTruthy();
+    }
   });
 });

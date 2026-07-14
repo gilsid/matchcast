@@ -16,6 +16,7 @@ export default defineConfig({
       PORT: "3001",
       CORS_ORIGIN: "http://localhost:5173",
       JWT_SECRET: "test-secret-for-playwright",
+      AUTH_RATE_LIMIT: "100",
       DATABASE_URL: process.env["DATABASE_URL"] || "postgresql://postgres:postgres@localhost:5432/tournament_db?schema=public",
     },
   },
