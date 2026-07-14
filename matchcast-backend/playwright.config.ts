@@ -7,6 +7,13 @@ export default defineConfig({
     baseURL: "http://localhost:3001",
     extraHTTPHeaders: { "Content-Type": "application/json" },
   },
+  projects: [
+    {
+      name: "api",
+      testMatch: "**/*.spec.ts",
+      use: { baseURL: "http://localhost:3001" },
+    },
+  ],
   webServer: {
     command: "bun run src/index.ts",
     port: 3001,

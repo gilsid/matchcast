@@ -16,6 +16,7 @@ Platform manajemen turnamen olahraga amatir. Penyelenggara bikin bracket, kelola
 | Testing | Playwright (API-level, di backend) |
 | Font | Inter (body), Oswald (display), JetBrains Mono (mono) via @fontsource |
 | Ikon | svelte-radix |
+| Production DB | Neon (serverless PostgreSQL) |
 
 ## 3. Struktur Folder
 
@@ -129,15 +130,6 @@ bun run build             # prisma generate + migrate deploy
 bun run test              # playwright test
 bunx prisma migrate dev   # migrasi schema (development)
 bunx prisma studio        # GUI database
-```
-
-### Frontend (matchcast-frontend/)
-```
-bun run dev       # dev server (port 5173)
-bun run build     # production build
-bun run check     # svelte-check typecheck
-bun run lint      # prettier + eslint
-bun run format    # prettier --write
 ```
 
 ## 9. Aturan Kerja

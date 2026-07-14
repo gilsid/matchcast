@@ -45,13 +45,14 @@ export async function generateBracket(tournamentId: string, ownerId: string) {
     throw new BracketError("Minimum 2 teams required", "NOT_ENOUGH_TEAMS", 400);
   }
 
-  const existingMatches = await prisma.match.count({ where: { tournamentId } });
-  if (existingMatches > 0) {
-    throw new BracketError("Bracket already generated", "BRACKET_EXISTS", 409);
-  }
-
-  if (tournament.status !== "draft") {
-    throw new BracketError("Bracket can only be generated for draft tournaments", "INVALID_STATUS", 400);
+  // Atomic lock: update status hanya jika masih "draft"
+  // Mencegah race condition dari concurrent request
+  const locked = await prisma.tournament.updateMany({
+    where: { id: tournamentId, status: "draft" },
+    data: { status: "ongoing" },
+  });
+  if (locked.count === 0) {
+    throw new BracketError("Bracket already generated or tournament not in draft status", "BRACKET_EXISTS", 409);
   }
 
   // Shuffle teams for random seeding
@@ -160,11 +161,6 @@ export async function generateBracket(tournamentId: string, ownerId: string) {
       });
       created.push(match);
     }
-    // Update tournament status to ongoing
-    await tx.tournament.update({
-      where: { id: tournamentId },
-      data: { status: "ongoing" },
-    });
     return created;
   });
 
@@ -222,10 +218,6 @@ export async function updateMatchScore(
     throw new BracketError("Not authorized", "UNAUTHORIZED", 403);
   }
 
-  if (match.status === "finished") {
-    throw new BracketError("Match already finished", "ALREADY_FINISHED", 400);
-  }
-
   if (homeScore < 0 || awayScore < 0) {
     throw new BracketError("Scores cannot be negative", "VALIDATION_ERROR", 400);
   }
@@ -239,17 +231,27 @@ export async function updateMatchScore(
     throw new BracketError("Cannot determine winner: missing team", "MISSING_TEAM", 400);
   }
 
-  // Update match with score and winner
-  const updatedMatch = await prisma.match.update({
-    where: { id: matchId },
+  // Atomic update: hanya jika match belum finished — mencegah race condition
+  const updatedBatch = await prisma.match.updateMany({
+    where: { id: matchId, status: { not: "finished" } },
     data: {
       homeScore,
       awayScore,
       winnerTeamId,
       status: "finished",
     },
+  });
+  if (updatedBatch.count === 0) {
+    throw new BracketError("Match already finished", "ALREADY_FINISHED", 400);
+  }
+
+  const updatedMatch = await prisma.match.findUnique({
+    where: { id: matchId },
     include: { homeTeam: true, awayTeam: true, winnerTeam: true },
   });
+  if (!updatedMatch) {
+    throw new BracketError("Match not found", "NOT_FOUND", 404);
+  }
 
   // Propagate winner to next round
   await propagateWinner(match.tournamentId, match.round, match.matchOrder, winnerTeamId);
