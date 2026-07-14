@@ -32,6 +32,7 @@ const corsOrigins = (process.env["CORS_ORIGIN"] || "http://localhost:5173")
 await app.register(cors, {
   origin: corsOrigins,
   credentials: true,
+  methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"],
 });
 
 const requireAuth = makeOnRequestAuth(app.jwt);
