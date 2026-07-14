@@ -30,16 +30,6 @@ interface MatchData {
 // Unique per run to avoid collisions
 const RUN_ID = Date.now().toString(36);
 
-export async function registerUser(request: APIRequestContext): Promise<AuthData> {
-  const email = `test-${RUN_ID}-${Math.random().toString(36).slice(2, 8)}@test.com`;
-  const res = await request.post("/auth/register", {
-      data: { email, password: "testpass123", name: "Test User" },
-  });
-  const body = await res.json();
-  if (!body.success) throw new Error(`register failed: ${body.error?.message}`);
-  return { userId: body.data.id, token: "" };
-}
-
 export async function loginUser(request: APIRequestContext): Promise<{ token: string; userId: string }> {
   const email = `test-${RUN_ID}-${Math.random().toString(36).slice(2, 8)}@test.com`;
   let res = await request.post("/auth/register", {
@@ -54,12 +44,15 @@ export async function loginUser(request: APIRequestContext): Promise<{ token: st
   body = await res.json();
   if (!body.success) throw new Error(`login failed: ${body.error?.message}`);
 
-  // Get token from cookie
-  const cookies = res.headers()["set-cookie"] || "";
+  // Get token from cookie (use headersArray to preserve multiple Set-Cookie headers)
+  const cookies = res.headersArray()
+    .filter(h => h.name.toLowerCase() === "set-cookie")
+    .map(h => h.value)
+    .join("; ");
   const tokenMatch = cookies.match(/token=([^;]+)/);
-  const token = tokenMatch ? tokenMatch[1] : body.data?.token || "";
+  const token = tokenMatch ? tokenMatch[1] : "";
 
-  return { token, userId: body.data.user.id };
+  return { token: tokenMatch?.[1] ?? "", userId: body.data.user.id };
 }
 
 export async function createTournament(

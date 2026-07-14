@@ -1,4 +1,5 @@
 import { prisma } from "../prisma-client";
+import type { Prisma } from "../generated/prisma/client";
 
 export class BracketError extends Error {
   constructor(
@@ -43,16 +44,6 @@ export async function generateBracket(tournamentId: string, ownerId: string) {
 
   if (tournament.teams.length < 2) {
     throw new BracketError("Minimum 2 teams required", "NOT_ENOUGH_TEAMS", 400);
-  }
-
-  // Atomic lock: update status hanya jika masih "draft"
-  // Mencegah race condition dari concurrent request
-  const locked = await prisma.tournament.updateMany({
-    where: { id: tournamentId, status: "draft" },
-    data: { status: "ongoing" },
-  });
-  if (locked.count === 0) {
-    throw new BracketError("Bracket already generated or tournament not in draft status", "BRACKET_EXISTS", 409);
   }
 
   // Shuffle teams for random seeding
@@ -144,8 +135,17 @@ export async function generateBracket(tournamentId: string, ownerId: string) {
     prevRoundMatches = matchesInRound;
   }
 
-  // Create all matches in a transaction
+  // Create all matches in a transaction (atomic lock + match creation)
   const createdMatches = await prisma.$transaction(async (tx) => {
+    // Atomic lock: update status hanya jika masih "draft"
+    const locked = await tx.tournament.updateMany({
+      where: { id: tournamentId, status: "draft" },
+      data: { status: "ongoing" },
+    });
+    if (locked.count === 0) {
+      throw new BracketError("Bracket already generated or tournament not in draft status", "BRACKET_EXISTS", 409);
+    }
+
     const created = [];
     for (const m of matchesToCreate) {
       const match = await tx.match.create({
@@ -189,10 +189,16 @@ export async function startMatch(matchId: string, ownerId: string) {
     throw new BracketError("Both teams must be assigned before starting", "MISSING_TEAMS", 400);
   }
 
-  return prisma.match.update({
-    where: { id: matchId },
+  // Atomic update: hanya jika status masih "scheduled" — mencegah race condition
+  const updated = await prisma.match.updateMany({
+    where: { id: matchId, status: "scheduled" },
     data: { status: "ongoing" },
   });
+  if (updated.count === 0) {
+    throw new BracketError("Match already started or finished", "INVALID_STATUS", 400);
+  }
+
+  return prisma.match.findUnique({ where: { id: matchId } });
 }
 
 export async function updateMatchScore(
@@ -231,47 +237,52 @@ export async function updateMatchScore(
     throw new BracketError("Cannot determine winner: missing team", "MISSING_TEAM", 400);
   }
 
-  // Atomic update: hanya jika match belum finished — mencegah race condition
-  const updatedBatch = await prisma.match.updateMany({
-    where: { id: matchId, status: { not: "finished" } },
-    data: {
-      homeScore,
-      awayScore,
-      winnerTeamId,
-      status: "finished",
-    },
-  });
-  if (updatedBatch.count === 0) {
-    throw new BracketError("Match already finished", "ALREADY_FINISHED", 400);
-  }
-
-  const updatedMatch = await prisma.match.findUnique({
-    where: { id: matchId },
-    include: { homeTeam: true, awayTeam: true, winnerTeam: true },
-  });
-  if (!updatedMatch) {
-    throw new BracketError("Match not found", "NOT_FOUND", 404);
-  }
-
-  // Propagate winner to next round
-  await propagateWinner(match.tournamentId, match.round, match.matchOrder, winnerTeamId);
-
-  // Check if tournament is finished (final match done)
-  const finalMatch = await prisma.match.findFirst({
-    where: { tournamentId: match.tournamentId },
-    orderBy: { round: "desc" },
-  });
-  if (finalMatch && finalMatch.status === "finished") {
-    await prisma.tournament.update({
-      where: { id: match.tournamentId },
-      data: { status: "finished" },
+  // Atomic score update + propagate + tournament-finish in single transaction
+  const [updatedMatch] = await prisma.$transaction(async (tx) => {
+    const updatedBatch = await tx.match.updateMany({
+      where: { id: matchId, status: "ongoing" },
+      data: {
+        homeScore,
+        awayScore,
+        winnerTeamId,
+        status: "finished",
+      },
     });
-  }
+    if (updatedBatch.count === 0) {
+      throw new BracketError("Match already finished", "ALREADY_FINISHED", 400);
+    }
+
+    const updated = await tx.match.findUnique({
+      where: { id: matchId },
+      include: { homeTeam: true, awayTeam: true, winnerTeam: true },
+    });
+    if (!updated) {
+      throw new BracketError("Match not found", "NOT_FOUND", 404);
+    }
+
+    // Propagate winner to next round
+    await propagateWinner(tx, match.tournamentId, match.round, match.matchOrder, winnerTeamId);
+
+    // Check if tournament is finished (final match done)
+    const finalMatch = await tx.match.findFirst({
+      where: { tournamentId: match.tournamentId },
+      orderBy: { round: "desc" },
+    });
+    if (finalMatch && finalMatch.status === "finished") {
+      await tx.tournament.update({
+        where: { id: match.tournamentId },
+        data: { status: "finished" },
+      });
+    }
+
+    return [updated];
+  });
 
   return updatedMatch;
 }
 
 async function propagateWinner(
+  tx: Prisma.TransactionClient,
   tournamentId: string,
   currentRound: number,
   currentMatchOrder: number,
@@ -284,7 +295,7 @@ async function propagateWinner(
   // In the next round match, winner becomes home if currentMatchOrder is odd, away if even
   const isHome = currentMatchOrder % 2 === 1;
 
-  const nextMatch = await prisma.match.findFirst({
+  const nextMatch = await tx.match.findFirst({
     where: {
       tournamentId,
       round: nextRound,
@@ -297,28 +308,32 @@ async function propagateWinner(
   if (isHome) {
     // Winner goes to home slot if empty, else away
     if (nextMatch.homeTeamId === null) {
-      await prisma.match.update({
+      await tx.match.update({
         where: { id: nextMatch.id },
         data: { homeTeamId: winnerTeamId },
       });
     } else if (nextMatch.awayTeamId === null) {
-      await prisma.match.update({
+      await tx.match.update({
         where: { id: nextMatch.id },
         data: { awayTeamId: winnerTeamId },
       });
+    } else {
+      throw new BracketError("Next round match already has both teams assigned", "BRACKET_CORRUPT", 500);
     }
   } else {
     // Winner goes to away slot if empty, else home
     if (nextMatch.awayTeamId === null) {
-      await prisma.match.update({
+      await tx.match.update({
         where: { id: nextMatch.id },
         data: { awayTeamId: winnerTeamId },
       });
     } else if (nextMatch.homeTeamId === null) {
-      await prisma.match.update({
+      await tx.match.update({
         where: { id: nextMatch.id },
         data: { homeTeamId: winnerTeamId },
       });
+    } else {
+      throw new BracketError("Next round match already has both teams assigned", "BRACKET_CORRUPT", 500);
     }
   }
 

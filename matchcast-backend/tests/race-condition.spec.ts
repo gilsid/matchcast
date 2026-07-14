@@ -28,6 +28,8 @@ test.describe("Race conditions", () => {
     ]);
 
     // Count successes
+    const rejected = results.filter((r) => r.status === "rejected");
+    expect(rejected).toHaveLength(0);
     const successCount = results.filter(
       (r) => r.status === "fulfilled" && (r.value as any).status() === 200,
     ).length;
@@ -60,14 +62,16 @@ test.describe("Race conditions", () => {
       data: {},
       headers: { Authorization: `Bearer ${token}` },
     });
+    expect(genRes.ok()).toBeTruthy();
     const genData = await genRes.json();
     const matchId = genData.data[0].id;
 
     // Start the match
-    await request.patch(`/matches/${matchId}/start`, {
+    const startRes = await request.patch(`/matches/${matchId}/start`, {
       data: {},
       headers: { Authorization: `Bearer ${token}` },
     });
+    expect(startRes.ok()).toBeTruthy();
 
     // Fire 3 concurrent score updates with different scores
     const results = await Promise.allSettled([
@@ -85,6 +89,8 @@ test.describe("Race conditions", () => {
       }),
     ]);
 
+    const rejected = results.filter((r) => r.status === "rejected");
+    expect(rejected).toHaveLength(0);
     const successCount = results.filter(
       (r) => r.status === "fulfilled" && (r.value as any).status() === 200,
     ).length;

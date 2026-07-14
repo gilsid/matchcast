@@ -25,6 +25,7 @@ export default defineConfig({
       JWT_SECRET: "test-secret-for-playwright",
       AUTH_RATE_LIMIT: "100",
       DATABASE_URL: process.env["DATABASE_URL"] || "postgresql://postgres:postgres@localhost:5432/tournament_db?schema=public",
+      DATABASE_URL_UNPOOLED: process.env["DATABASE_URL_UNPOOLED"] || "postgresql://postgres:postgres@localhost:5432/tournament_db?schema=public",
     },
   },
 });
