@@ -4,6 +4,8 @@
   "type": "module",
   "private": true,
   "scripts": {
+    "start": "bun run src/index.ts",
+    "build": "bunx prisma generate && bunx prisma migrate deploy",
     "test": "playwright test"
   },
   "devDependencies": {

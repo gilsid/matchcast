@@ -25,8 +25,12 @@ await app.register(fjwt, {
   cookie: { cookieName: "token" },
 });
 
+const corsOrigins = (process.env["CORS_ORIGIN"] || "http://localhost:5173")
+  .split(",")
+  .map((s: string) => s.trim())
+  .filter(Boolean);
 await app.register(cors, {
-  origin: process.env["CORS_ORIGIN"] || "http://localhost:5173",
+  origin: corsOrigins,
   credentials: true,
 });
 

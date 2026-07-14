@@ -9,7 +9,7 @@ Platform manajemen turnamen olahraga amatir. Penyelenggara bikin bracket, kelola
 | Lapisan | Stack |
 |---------|-------|
 | Frontend | SvelteKit 2 + TypeScript + Tailwind CSS 4 + shadcn-svelte (CVA, tailwind-variants, tailwind-merge) |
-| Backend | Fastify 5 + TypeScript + Prisma 7 |
+| Backend | Fastify 5 + TypeScript + Prisma 7 + Neon (production DB) |
 | Database | PostgreSQL |
 | Runtime | Bun |
 | Auth | JWT via `@fastify/jwt`, httpOnly cookie (`token`), bcryptjs |
@@ -124,8 +124,10 @@ destructive: #E54B4B
 ### Backend (matchcast-backend/)
 ```
 bun run src/index.ts      # dev server (port 3001)
+bun run start             # production start
+bun run build             # prisma generate + migrate deploy
 bun run test              # playwright test
-bunx prisma migrate dev   # migrasi schema
+bunx prisma migrate dev   # migrasi schema (development)
 bunx prisma studio        # GUI database
 ```
 
@@ -146,4 +148,4 @@ bun run format    # prettier --write
 4. **Ambiguitas:** tanya dulu. Jangan asumsi.
 5. **Git:** jangan commit dengan `-A`. Staging hanya file yang sengaja diubah.
 6. **Scope:** jangan implementasi fitur di luar yang diminta.
-7. **Keamanan:** production tanpa `JWT_SECRET` → fatal error + exit. Input di-trim dan divalidasi (email regex, max length). Rate limit auth 5/m/IP.
+7. **Keamanan:** production tanpa `JWT_SECRET` → fatal error + exit. Input di-trim dan divalidasi (email regex, max length, integer non-negatif untuk skor). Rate limit auth 5/m/IP.

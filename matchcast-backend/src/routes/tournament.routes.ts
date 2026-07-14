@@ -139,6 +139,20 @@ export const tournamentRoutes: FastifyPluginAsync<{ requireAuth: (req: FastifyRe
       });
       return;
     }
+    if (!Number.isInteger(body.homeScore) || !Number.isInteger(body.awayScore)) {
+      reply.code(400).send({
+        success: false,
+        error: { message: "Skor harus berupa bilangan bulat", code: "VALIDATION_ERROR" },
+      });
+      return;
+    }
+    if (body.homeScore < 0 || body.awayScore < 0) {
+      reply.code(400).send({
+        success: false,
+        error: { message: "Skor tidak boleh negatif", code: "VALIDATION_ERROR" },
+      });
+      return;
+    }
     try {
       const match = await bracketService.updateMatchScore(id, request.userId, body.homeScore, body.awayScore);
       reply.send({ success: true, data: match });
