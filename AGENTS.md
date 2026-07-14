@@ -127,7 +127,8 @@ destructive: #E54B4B
 bun run src/index.ts      # dev server (port 3001)
 bun run start             # production start
 bun run build             # prisma generate + migrate deploy
-bun run test              # playwright test
+bun run test              # playwright test (API-level)
+cd ../matchcast-frontend && bun run test  # mobile responsive test (browser)
 bunx prisma migrate dev   # migrasi schema (development)
 bunx prisma studio        # GUI database
 ```
