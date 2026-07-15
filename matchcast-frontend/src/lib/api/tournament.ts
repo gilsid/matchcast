@@ -105,6 +105,7 @@ export function deleteTeam(tournamentId: string, teamId: string) {
 export function generateBracket(tournamentId: string) {
   return request<Match[]>(`/tournaments/${tournamentId}/generate-bracket`, {
     method: "POST",
+    body: JSON.stringify({}),
   });
 }
 
