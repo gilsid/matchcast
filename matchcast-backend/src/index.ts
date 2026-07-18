@@ -22,7 +22,7 @@ if (process.env["NODE_ENV"] !== "production") {
 
 await app.register(fjwt, {
   secret: jwtSecret,
-  cookie: { cookieName: "token" },
+  cookie: { cookieName: "token", signed: false },
 });
 
 const corsOrigins = (process.env["CORS_ORIGIN"] || "http://localhost:5173")

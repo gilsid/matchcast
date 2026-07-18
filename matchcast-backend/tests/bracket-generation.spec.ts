@@ -13,7 +13,7 @@ test.describe("Bracket generation - bye logic", () => {
     const t = await createTournament(request, token, `Test ${teamCount} teams ${suffix}`);
     const teams: { id: string; name: string }[] = [];
     for (let i = 0; i < teamCount; i++) {
-      const team = await addTeam(request, token, t.id, TEAM_NAMES[i]);
+      const team = await addTeam(request, token, t.id, TEAM_NAMES[i]!);
       teams.push(team);
     }
     const matches = await generateBracket(request, token, t.id);

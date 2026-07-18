@@ -7,3 +7,14 @@
 # Playwright
 matchcast-backend/test-results/
 matchcast-backend/playwright-report/
+
+# Agent temp data
+.pi-subagents/
+
+# Node
+node_modules/
+
+# Environment files
+.env
+.env.local
+.env.*.local

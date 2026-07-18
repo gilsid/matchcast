@@ -54,6 +54,13 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       });
       return;
     }
+    if (password.length > 128) {
+      reply.code(400).send({
+        success: false,
+        error: { message: "Password maksimal 128 karakter", code: "VALIDATION_ERROR" },
+      });
+      return;
+    }
 
     try {
       const user = await authService.register(trimmedEmail, password, trimmedName);
@@ -82,6 +89,13 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       reply.code(400).send({
         success: false,
         error: { message: "Email and password are required", code: "VALIDATION_ERROR" },
+      });
+      return;
+    }
+    if (password.length > 128) {
+      reply.code(400).send({
+        success: false,
+        error: { message: "Password maksimal 128 karakter", code: "VALIDATION_ERROR" },
       });
       return;
     }

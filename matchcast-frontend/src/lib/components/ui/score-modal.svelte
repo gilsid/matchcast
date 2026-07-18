@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tick } from "svelte";
   import type { Match } from "$lib/api/tournament";
 
   let {
@@ -16,6 +17,9 @@
   let homeScore = $state<number | string>("");
   let awayScore = $state<number | string>("");
   let validationError = $state("");
+
+  let dialogEl: HTMLDivElement | undefined = $state();
+  let homeInputEl: HTMLInputElement | undefined = $state();
 
   function handleSubmit(e: Event) {
     e.preventDefault();
@@ -40,8 +44,19 @@
     onsubmit(h, a);
   }
 
-  function handleKeydown(e: KeyboardEvent) {
+  function onEscape(e: KeyboardEvent) {
     if (e.key === "Escape") onclose();
+  }
+
+  function onBackdropClick() {
+    onclose();
+  }
+
+  function onBackdropKeydown(e: KeyboardEvent) {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onclose();
+    }
   }
 
   function reset() {
@@ -51,24 +66,56 @@
   }
 
   $effect(() => {
-    if (open) reset();
+    if (open) {
+      reset();
+      tick().then(() => homeInputEl?.focus());
+    }
   });
 </script>
 
 {#if open}
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <svelte:window onkeydown={onEscape} />
+
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
   <div
+    bind:this={dialogEl}
     class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
-    onclick={onclose}
-    onkeydown={handleKeydown}
+    onclick={onBackdropClick}
+    onkeydown={onBackdropKeydown}
     role="dialog"
+    aria-modal="true"
+    aria-labelledby="score-modal-title"
     tabindex="-1"
   >
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <div
       class="clipped bg-bg-surface border border-border-subtle w-full max-w-sm p-6"
       onclick={(e) => e.stopPropagation()}
+      onkeydown={(e) => {
+        // focus trap: Tab on last focusable cycles to first
+        if (e.key === "Tab" && !e.shiftKey) {
+          const focusable = dialogEl?.querySelectorAll<HTMLElement>(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+          );
+          if (focusable && focusable.length > 0 && document.activeElement === focusable[focusable.length - 1]) {
+            e.preventDefault();
+            focusable[0].focus();
+          }
+        }
+        // focus trap: Shift+Tab on first focusable cycles to last
+        if (e.key === "Tab" && e.shiftKey) {
+          const focusable = dialogEl?.querySelectorAll<HTMLElement>(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+          );
+          if (focusable && focusable.length > 0 && document.activeElement === focusable[0]) {
+            e.preventDefault();
+            focusable[focusable.length - 1].focus();
+          }
+        }
+      }}
     >
-      <h3 class="font-display mb-4 text-lg font-bold uppercase tracking-wide">
+      <h3 id="score-modal-title" class="font-display mb-4 text-lg font-bold uppercase tracking-wide">
         Input Skor
       </h3>
       <form onsubmit={handleSubmit} class="space-y-4">
@@ -78,6 +125,7 @@
           </label>
           <input
             id="home-score"
+            bind:this={homeInputEl}
             type="number"
             min="0"
             bind:value={homeScore}
@@ -102,7 +150,7 @@
           />
         </div>
         {#if validationError}
-          <p class="text-accent-live font-mono text-xs">{validationError}</p>
+          <p class="text-accent-live font-mono text-xs" role="alert">{validationError}</p>
         {/if}
         <div class="flex gap-3">
           <button type="button" onclick={onclose}

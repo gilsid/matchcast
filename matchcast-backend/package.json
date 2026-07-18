@@ -6,7 +6,9 @@
   "scripts": {
     "start": "bun run src/index.ts",
     "build": "bunx prisma generate && bunx prisma migrate deploy",
-    "test": "playwright test"
+    "typecheck": "tsc --noEmit",
+    "test": "playwright test",
+    "test:ci": "bun run typecheck && bun run test"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",

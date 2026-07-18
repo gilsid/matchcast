@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    defaults:
+      run:
+        working-directory: matchcast-backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install
+
+      - run: bun run typecheck
+
+      - run: bunx prisma generate
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/test
+
+      - run: bunx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/test
+          DATABASE_URL_UNPOOLED: postgresql://test:test@localhost:5432/test
+
+      - run: bun run test
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/test
+          DATABASE_URL_UNPOOLED: postgresql://test:test@localhost:5432/test
+          JWT_SECRET: ci-test-secret-not-for-production
+          NODE_ENV: test
+          AUTH_RATE_LIMIT: "100"
+          CORS_ORIGIN: http://localhost:5173
+
+  frontend-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    defaults:
+      run:
+        working-directory: matchcast-frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install
+
+      - run: bunx svelte-kit sync
+
+      - run: bun run build
+
+      - run: bun run test
+        env:
+          VITE_API_URL: http://localhost:3001

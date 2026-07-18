@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import { getHealth } from "$lib/api/health";
   import { goto } from "$app/navigation";
 
@@ -21,7 +22,7 @@
     }
   }
 
-  checkHealth();
+  onMount(checkHealth);
 </script>
 
 <div class="flex min-h-screen flex-col items-center justify-center gap-6 px-4">

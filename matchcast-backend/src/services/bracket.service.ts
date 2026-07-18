@@ -21,7 +21,9 @@ function shuffleArray<T>(array: T[]): T[] {
   const arr = [...array];
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
+    const tmp = arr[i]!;
+    arr[i] = arr[j]!;
+    arr[j] = tmp;
   }
   return arr;
 }
@@ -78,8 +80,8 @@ export async function generateBracket(tournamentId: string, ownerId: string) {
     matchesToCreate.push({
       round: 1,
       matchOrder: matchOrder++,
-      homeTeamId: round1Teams[i * 2].id,
-      awayTeamId: round1Teams[i * 2 + 1].id,
+      homeTeamId: round1Teams[i * 2]!.id,
+      awayTeamId: round1Teams[i * 2 + 1]!.id,
       status: "scheduled",
     });
   }
@@ -123,10 +125,10 @@ export async function generateBracket(tournamentId: string, ownerId: string) {
         const homeSlot = i * 2;
         const awaySlot = i * 2 + 1;
         if (byeIdx < byes && !propagateSlots.has(homeSlot)) {
-          match.homeTeamId = byeTeams[byeIdx++].id;
+          match.homeTeamId = byeTeams[byeIdx++]!.id;
         }
         if (byeIdx < byes && !propagateSlots.has(awaySlot)) {
-          match.awayTeamId = byeTeams[byeIdx++].id;
+          match.awayTeamId = byeTeams[byeIdx++]!.id;
         }
       }
 

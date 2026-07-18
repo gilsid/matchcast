@@ -8,6 +8,7 @@ export const tournamentRoutes: FastifyPluginAsync<{ requireAuth: (req: FastifyRe
   app.post("/tournaments", { onRequest: [auth] }, async (request, reply) => {
     const body = request.body as { name?: string; sport?: string; format?: string };
     const name = body.name?.trim() ?? "";
+    const sport = body.sport?.trim() ?? "";
     if (name.length > 100) {
       reply.code(400).send({
         success: false,
@@ -15,8 +16,15 @@ export const tournamentRoutes: FastifyPluginAsync<{ requireAuth: (req: FastifyRe
       });
       return;
     }
+    if (!sport) {
+      reply.code(400).send({
+        success: false,
+        error: { message: "Sport is required", code: "VALIDATION_ERROR" },
+      });
+      return;
+    }
     try {
-      const tournament = await tournamentService.createTournament(request.userId, { ...body, name });
+      const tournament = await tournamentService.createTournament(request.userId, { name, sport, format: body.format });
       reply.code(201).send({ success: true, data: tournament });
     } catch (err) {
       if (err instanceof tournamentService.TournamentError) {

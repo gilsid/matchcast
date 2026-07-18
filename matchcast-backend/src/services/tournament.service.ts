@@ -115,6 +115,13 @@ export async function addTeam(tournamentId: string, ownerId: string, name: strin
   if (!tournament) {
     throw new TournamentError("Tournament not found", "NOT_FOUND", 404);
   }
+  if (tournament.status !== "draft") {
+    throw new TournamentError(
+      "Teams cannot be added after bracket is generated",
+      "BRACKET_LOCKED",
+      403,
+    );
+  }
 
   return prisma.team.create({
     data: { name: tName, tournamentId },
