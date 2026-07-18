@@ -44,7 +44,9 @@ await app.register(publicRoutes);
 
 app.setErrorHandler((err, request, reply) => {
   app.log.error({ err, url: request.url, method: request.method }, "Unhandled error");
-  const statusCode = (err as any).statusCode ?? 500;
+  const statusCode = typeof err === "object" && err !== null && "statusCode" in err
+    ? (err as { statusCode: number }).statusCode
+    : 500;
   reply.code(statusCode).send({
     success: false,
     error: {

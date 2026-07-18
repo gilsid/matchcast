@@ -78,10 +78,6 @@ html {
   }
 }
 
-.live-pulse {
-  animation: live-pulse 2s ease-in-out infinite;
-}
-
 .live-badge {
   display: inline-flex;
   align-items: center;
