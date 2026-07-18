@@ -1,15 +1,21 @@
 import { test, expect } from "@playwright/test";
-import { loginUser, createTournament, addTeam, generateBracket } from "./helpers";
+import { loginUser, createTournament, addTeam, generateBracket, cleanupUser } from "./helpers";
 
 test.describe("Bracket generation - bye logic", () => {
   const TEAM_NAMES = ["Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf", "Hotel"];
+  let userEmail = "";
+
+  test.afterAll(async () => {
+    if (userEmail) await cleanupUser(userEmail);
+  });
 
   async function setupTournamentWithTeams(
     request: any,
     teamCount: number,
     suffix: string,
   ) {
-    const { token } = await loginUser(request);
+    const { token, email } = await loginUser(request);
+    if (!userEmail) userEmail = email;
     const t = await createTournament(request, token, `Test ${teamCount} teams ${suffix}`);
     const teams: { id: string; name: string }[] = [];
     for (let i = 0; i < teamCount; i++) {

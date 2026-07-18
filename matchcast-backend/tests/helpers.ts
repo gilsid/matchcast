@@ -1,4 +1,5 @@
 import type { APIRequestContext } from "@playwright/test";
+import { prisma } from "../src/prisma-client";
 
 interface TeamData {
   id: string;
@@ -30,7 +31,7 @@ interface MatchData {
 // Unique per run to avoid collisions
 const RUN_ID = Date.now().toString(36);
 
-export async function loginUser(request: APIRequestContext): Promise<{ token: string; userId: string }> {
+export async function loginUser(request: APIRequestContext): Promise<{ token: string; userId: string; email: string }> {
   const email = `test-${RUN_ID}-${Math.random().toString(36).slice(2, 8)}@test.com`;
   let res = await request.post("/auth/register", {
       data: { email, password: "testpass123", name: "Test User" },
@@ -52,7 +53,11 @@ export async function loginUser(request: APIRequestContext): Promise<{ token: st
   const tokenMatch = cookies.match(/token=([^;]+)/);
   const token = tokenMatch ? tokenMatch[1] : "";
 
-  return { token: tokenMatch?.[1] ?? "", userId: body.data.user.id };
+  return { token: tokenMatch?.[1] ?? "", userId: body.data.user.id, email };
+}
+
+export async function cleanupUser(email: string) {
+  await prisma.user.delete({ where: { email } }).catch(() => {});
 }
 
 export async function createTournament(

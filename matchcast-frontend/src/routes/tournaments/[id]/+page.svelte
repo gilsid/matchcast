@@ -1,25 +1,25 @@
 <script lang="ts">
-  import { onMount } from "svelte";
   import { page } from "$app/state";
   import { goto } from "$app/navigation";
   import {
-    getTournament,
     addTeam,
     deleteTeam,
     generateBracket,
     startMatch,
     updateMatchScore,
-    AuthError,
     type Tournament,
     type Match,
   } from "$lib/api/tournament";
   import ScoreModal from "$lib/components/ui/score-modal.svelte";
   import Bracket from "$lib/components/ui/bracket.svelte";
 
-  const id = $derived(page.params.id);
+  let {
+    data,
+  }: {
+    data: { tournament: Tournament };
+  } = $props();
 
-  let tournament = $state<Tournament | null>(null);
-  let loading = $state(true);
+  let tournament = $state<Tournament>(data.tournament);
   let error = $state("");
 
   let teamName = $state("");
@@ -27,33 +27,19 @@
   let teamError = $state("");
 
   let generating = $state(false);
-  let bracketGenerated = $state(false);
+  let bracketGenerated = $state(tournament.status !== "draft");
 
   let scoreMatch = $state<Match | null>(null);
   let showScoreModal = $state(false);
-
-  async function load() {
-    loading = true;
-    error = "";
-    try {
-      tournament = await getTournament(id);
-      bracketGenerated = tournament.status !== "draft";
-    } catch (e) {
-      if (e instanceof AuthError) { goto("/login"); return; }
-      error = e instanceof Error ? e.message : "Gagal memuat turnamen";
-    } finally {
-      loading = false;
-    }
-  }
 
   async function handleAdd(e: Event) {
     e.preventDefault();
     adding = true;
     teamError = "";
     try {
-      await addTeam(id, teamName);
+      await addTeam(page.params.id!, teamName);
       teamName = "";
-      await load();
+      window.location.reload();
     } catch (e) {
       teamError = e instanceof Error ? e.message : "Gagal menambah tim";
     } finally {
@@ -63,8 +49,8 @@
 
   async function handleDelete(teamId: string) {
     try {
-      await deleteTeam(id, teamId);
-      await load();
+      await deleteTeam(page.params.id!, teamId);
+      window.location.reload();
     } catch (e) {
       error = e instanceof Error ? e.message : "Gagal menghapus tim";
     }
@@ -73,9 +59,8 @@
   async function handleGenerateBracket() {
     generating = true;
     try {
-      await generateBracket(id);
-      bracketGenerated = true;
-      await load();
+      await generateBracket(page.params.id!);
+      window.location.reload();
     } catch (e) {
       error = e instanceof Error ? e.message : "Gagal generate bracket";
     } finally {
@@ -86,7 +71,7 @@
   async function handleStartMatch(matchId: string) {
     try {
       await startMatch(matchId);
-      await load();
+      window.location.reload();
     } catch (e) {
       error = e instanceof Error ? e.message : "Gagal mulai pertandingan";
     }
@@ -95,13 +80,11 @@
   async function handleScore(match: Match, homeScore: number, awayScore: number) {
     try {
       await updateMatchScore(match.id, homeScore, awayScore);
-      await load();
+      window.location.reload();
     } catch (e) {
       error = e instanceof Error ? e.message : "Gagal update skor";
     }
   }
-
-  onMount(load);
 </script>
 
 <div class="mx-auto min-h-screen max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
@@ -109,9 +92,7 @@
     &larr; Kembali ke Dashboard
   </button>
 
-  {#if loading}
-    <p class="text-text-muted mt-8 font-mono text-xs">Memuat...</p>
-  {:else if error}
+  {#if error}
     <div class="mt-8">
       <p class="text-accent-live font-mono text-xs">{error}</p>
     </div>

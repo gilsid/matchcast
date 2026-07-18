@@ -42,9 +42,7 @@
 </svelte:head>
 
 <div class="mx-auto min-h-screen max-w-3xl space-y-4 p-4 sm:p-6">
-  {#if loading}
-    <p class="text-text-muted text-center text-sm">Memuat...</p>
-  {:else if error}
+  {#if error}
     <div class="flex min-h-[50vh] flex-col items-center justify-center">
       <p class="text-accent-live text-lg">{error}</p>
       <p class="text-text-muted mt-2 text-sm">Link mungkin tidak valid atau turnamen sudah dihapus.</p>
