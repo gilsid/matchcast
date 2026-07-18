@@ -11,6 +11,7 @@ function getToken(request: FastifyRequest): string | null {
 }
 
 export function makeOnRequestAuth(jwt: FastifyInstance["jwt"]) {
+  // async required — Fastify onRequest hook type expects Promise<void>
   return async (request: FastifyRequest, reply: FastifyReply) => {
     const token = getToken(request);
     if (!token) {

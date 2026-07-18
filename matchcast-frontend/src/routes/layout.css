@@ -3,7 +3,6 @@
 @import '@fontsource/oswald';
 @import '@fontsource/jetbrains-mono';
 
-@plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
 
 @custom-variant dark (&:is(.dark *));

@@ -45,7 +45,7 @@
   }
 
   function onEscape(e: KeyboardEvent) {
-    if (e.key === "Escape") onclose();
+    if (e.key === "Escape" && open) onclose();
   }
 
   function onBackdropClick() {
@@ -73,11 +73,10 @@
   });
 </script>
 
+<svelte:window onkeydown={onEscape} />
+
 {#if open}
   <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <svelte:window onkeydown={onEscape} />
-
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
   <div
     bind:this={dialogEl}
     class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
