@@ -1,15 +1,8 @@
 import { prisma } from "../prisma-client";
 import type { Prisma } from "../generated/prisma/client";
+import { DomainError } from "../utils/route-handler";
 
-export class BracketError extends Error {
-  constructor(
-    message: string,
-    public code: string,
-    public statusCode = 400,
-  ) {
-    super(message);
-  }
-}
+export class BracketError extends DomainError {}
 
 function nextPowerOf2(n: number): number {
   let p = 1;
@@ -137,7 +130,7 @@ export async function generateBracket(tournamentId: string, ownerId: string) {
     prevRoundMatches = matchesInRound;
   }
 
-  // Create all matches in a transaction (atomic lock + match creation)
+  // Create all matches in a transaction (atomic lock + match creation + seed persist)
   const createdMatches = await prisma.$transaction(async (tx) => {
     // Atomic lock: update status hanya jika masih "draft"
     const locked = await tx.tournament.updateMany({
@@ -146,6 +139,11 @@ export async function generateBracket(tournamentId: string, ownerId: string) {
     });
     if (locked.count === 0) {
       throw new BracketError("Bracket already generated or tournament not in draft status", "BRACKET_EXISTS", 409);
+    }
+
+    // Persist computed seeds
+    for (const t of teamsWithSeed) {
+      await tx.team.update({ where: { id: t.id }, data: { seed: t.seed } });
     }
 
     const created = [];
@@ -342,7 +340,7 @@ async function propagateWinner(
   // If both teams now filled and status was scheduled, keep as scheduled (will be played)
 }
 
-export async function getPublicMatches(slug: string) {
+export async function getPublicMatches(slug: string, page = 1, limit = 50) {
   const tournament = await prisma.tournament.findUnique({
     where: { slug },
     select: { id: true, status: true },
@@ -352,13 +350,29 @@ export async function getPublicMatches(slug: string) {
     throw new BracketError("Tournament not found", "NOT_FOUND", 404);
   }
 
-  return prisma.match.findMany({
-    where: { tournamentId: tournament.id },
-    orderBy: [{ round: "asc" }, { matchOrder: "asc" }],
-    include: {
-      homeTeam: { select: { id: true, name: true } },
-      awayTeam: { select: { id: true, name: true } },
-      winnerTeam: { select: { id: true, name: true } },
+  const skip = (page - 1) * limit;
+  const [matches, total] = await Promise.all([
+    prisma.match.findMany({
+      where: { tournamentId: tournament.id },
+      orderBy: [{ round: "asc" }, { matchOrder: "asc" }],
+      skip,
+      take: limit,
+      include: {
+        homeTeam: { select: { id: true, name: true } },
+        awayTeam: { select: { id: true, name: true } },
+        winnerTeam: { select: { id: true, name: true } },
+      },
+    }),
+    prisma.match.count({ where: { tournamentId: tournament.id } }),
+  ]);
+
+  return {
+    matches,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
     },
-  });
+  };
 }

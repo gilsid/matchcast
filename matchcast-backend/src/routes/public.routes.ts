@@ -1,7 +1,8 @@
-import type { FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsync, FastifyRequest, FastifyReply } from "fastify";
 import rateLimit from "@fastify/rate-limit";
 import * as tournamentService from "../services/tournament.service";
 import * as bracketService from "../services/bracket.service";
+import { wrapHandler } from "../utils/route-handler";
 
 export const publicRoutes: FastifyPluginAsync = async (app) => {
   await app.register(rateLimit, {
@@ -10,43 +11,24 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
     errorResponseBuilder: (_req, context) => ({
       success: false,
       error: {
-        message: `Too many requests. Try again in ${context.after?.replace("s", " detik") ?? "60 detik"}.`,
+        message: `Too many requests. Try again in ${context.after ? (context.after.endsWith("s") ? context.after.slice(0, -1) + " detik" : context.after) : "60 detik"}.`,
         code: "RATE_LIMITED",
       },
     }),
   });
 
-  app.get("/t/:slug", async (request, reply) => {
+  app.get("/t/:slug", wrapHandler(async (request, reply) => {
     const { slug } = request.params as { slug: string };
-    try {
-      const tournament = await tournamentService.getPublicTournamentBySlug(slug);
-      reply.send({ success: true, data: tournament });
-    } catch (err) {
-      if (err instanceof tournamentService.TournamentError) {
-        reply.code(err.statusCode).send({
-          success: false,
-          error: { message: err.message, code: err.code },
-        });
-        return;
-      }
-      throw err;
-    }
-  });
+    const tournament = await tournamentService.getPublicTournamentBySlug(slug);
+    reply.send({ success: true, data: tournament });
+  }));
 
-  app.get("/t/:slug/matches", async (request, reply) => {
+  app.get("/t/:slug/matches", wrapHandler(async (request, reply) => {
     const { slug } = request.params as { slug: string };
-    try {
-      const matches = await bracketService.getPublicMatches(slug);
-      reply.send({ success: true, data: matches });
-    } catch (err) {
-      if (err instanceof bracketService.BracketError) {
-        reply.code(err.statusCode).send({
-          success: false,
-          error: { message: err.message, code: err.code },
-        });
-        return;
-      }
-      throw err;
-    }
-  });
+    const query = request.query as { page?: string; limit?: string };
+    const page = Math.max(1, parseInt(query.page ?? "1", 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(query.limit ?? "50", 10) || 50));
+    const result = await bracketService.getPublicMatches(slug, page, limit);
+    reply.send({ success: true, data: result });
+  }));
 };

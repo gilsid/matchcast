@@ -7,7 +7,7 @@ test.describe("Mobile responsive — 375x667", () => {
   let authCookie: string;
   let tournamentSlug: string;
   let tournamentId: string;
-  let setupFailed = false;
+  let setupFailed = "";
 
   test.beforeAll(async ({ request }) => {
     try {
@@ -51,8 +51,8 @@ test.describe("Mobile responsive — 375x667", () => {
       });
       if (!bracketRes.ok()) throw new Error(`generate bracket failed: ${bracketRes.status()}`);
     } catch (e) {
-      setupFailed = true;
-      console.error("Setup failed, tests will be skipped:", e);
+      setupFailed = e instanceof Error ? `setup failed: ${e.message}` : "setup failed: unknown error";
+      console.error(setupFailed);
     }
   });
 
@@ -63,7 +63,9 @@ test.describe("Mobile responsive — 375x667", () => {
     ]);
   });
 
-  test.skip(setupFailed, "login page — form elements visible and tappable", async ({ page }) => {
+  function skipReason() { return setupFailed ? ` (${setupFailed})` : ""; }
+
+  test.skip(!!setupFailed, `login page — form elements visible and tappable${skipReason()}`, async ({ page }) => {
     await page.goto("/login");
     await page.waitForLoadState("networkidle");
 
@@ -88,7 +90,7 @@ test.describe("Mobile responsive — 375x667", () => {
     expect(scrollWidth).toBeLessThanOrEqual(375);
   });
 
-  test.skip(setupFailed, "register page — form elements visible and tappable", async ({ page }) => {
+  test.skip(!!setupFailed, `register page — form elements visible and tappable${skipReason()}`, async ({ page }) => {
     await page.goto("/register");
     await page.waitForLoadState("networkidle");
 
@@ -113,7 +115,7 @@ test.describe("Mobile responsive — 375x667", () => {
     expect(scrollWidth).toBeLessThanOrEqual(375);
   });
 
-  test.skip(setupFailed, "public tournament page — bracket readable, no overflow", async ({ page }) => {
+  test.skip(!!setupFailed, `public tournament page — bracket readable, no overflow${skipReason()}`, async ({ page }) => {
     // Wait for the API response that loads tournament data
     const responsePromise = page.waitForResponse(
       (res) => res.url().includes(`/t/${tournamentSlug}`) && res.status() === 200,
@@ -141,7 +143,7 @@ test.describe("Mobile responsive — 375x667", () => {
     expect(headerOverflow).toBeFalsy();
   });
 
-  test.skip(setupFailed, "dashboard — tournament list accessible", async ({ page }) => {
+  test.skip(!!setupFailed, `dashboard — tournament list accessible${skipReason()}`, async ({ page }) => {
     await page.goto("/dashboard");
     await page.waitForLoadState("networkidle");
 
@@ -163,7 +165,7 @@ test.describe("Mobile responsive — 375x667", () => {
     expect(scrollW).toBeLessThanOrEqual(375);
   });
 
-  test.skip(setupFailed, "tournament admin page — bracket actions accessible", async ({ page }) => {
+  test.skip(!!setupFailed, `tournament admin page — bracket actions accessible${skipReason()}`, async ({ page }) => {
     await page.goto(`/tournaments/${tournamentId}`);
     await page.waitForLoadState("networkidle");
 

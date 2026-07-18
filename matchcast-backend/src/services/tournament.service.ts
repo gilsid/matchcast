@@ -1,14 +1,7 @@
 import { prisma } from "../prisma-client";
+import { DomainError } from "../utils/route-handler";
 
-export class TournamentError extends Error {
-  constructor(
-    message: string,
-    public code: string,
-    public statusCode = 400,
-  ) {
-    super(message);
-  }
-}
+export class TournamentError extends DomainError {}
 
 function slugify(name: string): string {
   return name
@@ -62,20 +55,22 @@ export async function listTournaments(ownerId: string) {
   });
 }
 
+const tournamentInclude = {
+  teams: { orderBy: { id: "asc" as const } },
+  matches: {
+    orderBy: [{ round: "asc" as const }, { matchOrder: "asc" as const }],
+    include: {
+      homeTeam: { select: { id: true, name: true } },
+      awayTeam: { select: { id: true, name: true } },
+      winnerTeam: { select: { id: true, name: true } },
+    },
+  },
+};
+
 export async function getPublicTournamentBySlug(slug: string) {
   const tournament = await prisma.tournament.findUnique({
     where: { slug },
-    include: {
-      teams: { orderBy: { id: "asc" } },
-      matches: {
-        orderBy: [{ round: "asc" }, { matchOrder: "asc" }],
-        include: {
-          homeTeam: { select: { id: true, name: true } },
-          awayTeam: { select: { id: true, name: true } },
-          winnerTeam: { select: { id: true, name: true } },
-        },
-      },
-    },
+    include: tournamentInclude,
   });
   if (!tournament) {
     throw new TournamentError("Tournament not found", "NOT_FOUND", 404);
@@ -86,17 +81,7 @@ export async function getPublicTournamentBySlug(slug: string) {
 export async function getTournament(id: string, ownerId: string) {
   const tournament = await prisma.tournament.findFirst({
     where: { id, ownerId },
-    include: {
-      teams: { orderBy: { id: "asc" } },
-      matches: {
-        orderBy: [{ round: "asc" }, { matchOrder: "asc" }],
-        include: {
-          homeTeam: { select: { id: true, name: true } },
-          awayTeam: { select: { id: true, name: true } },
-          winnerTeam: { select: { id: true, name: true } },
-        },
-      },
-    },
+    include: tournamentInclude,
   });
   if (!tournament) {
     throw new TournamentError("Tournament not found", "NOT_FOUND", 404);

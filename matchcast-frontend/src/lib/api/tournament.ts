@@ -1,3 +1,5 @@
+import type { ApiSuccess, ApiErrorResponse, ApiResult } from "$lib/types";
+
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
 export class AuthError extends Error {
@@ -8,16 +10,6 @@ export class AuthError extends Error {
     super(message);
   }
 }
-
-interface ApiSuccess<T> {
-  success: true;
-  data: T;
-}
-interface ApiErrorResponse {
-  success: false;
-  error: { message: string; code: string };
-}
-type ApiResult<T> = ApiSuccess<T> | ApiErrorResponse;
 
 export interface Team {
   id: string;
@@ -37,6 +29,7 @@ export interface Tournament {
   updatedAt: string;
   teams?: Team[];
   _count?: { teams: number };
+  matches?: Match[];
 }
 
 export interface Match {
@@ -55,8 +48,8 @@ export interface Match {
   winnerTeam?: { id: string; name: string } | null;
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
+async function request<T>(path: string, init?: RequestInit, fetchFn = fetch): Promise<T> {
+  const res = await fetchFn(`${API_BASE}${path}`, {
     ...init,
     headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
     credentials: "include",
@@ -73,60 +66,59 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return data.data;
 }
 
-export function createTournament(input: { name: string; sport: string; format?: string }) {
+export function createTournament(input: { name: string; sport: string; format?: string }, fetchFn = fetch) {
   return request<Tournament>("/tournaments", {
     method: "POST",
     body: JSON.stringify(input),
-  });
+  }, fetchFn);
 }
 
-export function listTournaments() {
-  return request<Tournament[]>("/tournaments");
+export function listTournaments(fetchFn = fetch) {
+  return request<Tournament[]>("/tournaments", undefined, fetchFn);
 }
 
-export function getTournament(id: string) {
-  return request<Tournament>(`/tournaments/${id}`);
+export function getTournament(id: string, fetchFn = fetch) {
+  return request<Tournament>(`/tournaments/${id}`, undefined, fetchFn);
 }
 
-export function addTeam(tournamentId: string, name: string) {
+export function addTeam(tournamentId: string, name: string, fetchFn = fetch) {
   return request<Team>(`/tournaments/${tournamentId}/teams`, {
     method: "POST",
     body: JSON.stringify({ name }),
-  });
+  }, fetchFn);
 }
 
-export function deleteTeam(tournamentId: string, teamId: string) {
+export function deleteTeam(tournamentId: string, teamId: string, fetchFn = fetch) {
   return request<null>(`/tournaments/${tournamentId}/teams/${teamId}`, {
     method: "DELETE",
-  });
+  }, fetchFn);
 }
 
-// Phase 3
-export function generateBracket(tournamentId: string) {
+export function generateBracket(tournamentId: string, fetchFn = fetch) {
   return request<Match[]>(`/tournaments/${tournamentId}/generate-bracket`, {
     method: "POST",
     body: JSON.stringify({}),
-  });
+  }, fetchFn);
 }
 
-export function startMatch(matchId: string) {
+export function startMatch(matchId: string, fetchFn = fetch) {
   return request<Match>(`/matches/${matchId}/start`, {
     method: "PATCH",
     body: JSON.stringify({}),
-  });
+  }, fetchFn);
 }
 
-export function updateMatchScore(matchId: string, homeScore: number, awayScore: number) {
+export function updateMatchScore(matchId: string, homeScore: number, awayScore: number, fetchFn = fetch) {
   return request<Match>(`/matches/${matchId}/score`, {
     method: "PATCH",
     body: JSON.stringify({ homeScore, awayScore }),
-  });
+  }, fetchFn);
 }
 
-export function getPublicTournament(slug: string) {
-  return request<Tournament>(`/t/${slug}`);
+export function getPublicTournament(slug: string, fetchFn = fetch) {
+  return request<Tournament>(`/t/${slug}`, undefined, fetchFn);
 }
 
-export function getPublicMatches(slug: string) {
-  return request<Match[]>(`/t/${slug}/matches`);
+export function getPublicMatches(slug: string, fetchFn = fetch) {
+  return request<Match[]>(`/t/${slug}/matches`, undefined, fetchFn);
 }

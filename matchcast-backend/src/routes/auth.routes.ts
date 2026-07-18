@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import rateLimit from "@fastify/rate-limit";
 import * as authService from "../services/auth.service";
+import { wrapHandler } from "../utils/route-handler";
 
 export const authRoutes: FastifyPluginAsync = async (app) => {
   await app.register(rateLimit, {
@@ -13,7 +14,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     }),
   });
 
-  app.post("/auth/register", async (request, reply) => {
+  app.post("/auth/register", wrapHandler(async (request, reply) => {
     const { email, password, name } = request.body as {
       email: string;
       password: string;
@@ -62,22 +63,11 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       return;
     }
 
-    try {
-      const user = await authService.register(trimmedEmail, password, trimmedName);
-      reply.code(201).send({ success: true, data: user });
-    } catch (err) {
-      if (err instanceof authService.AuthError) {
-        reply.code(err.statusCode).send({
-          success: false,
-          error: { message: err.message, code: err.code },
-        });
-        return;
-      }
-      throw err;
-    }
-  });
+    const user = await authService.register(trimmedEmail, password, trimmedName);
+    reply.code(201).send({ success: true, data: user });
+  }));
 
-  app.post("/auth/login", async (request, reply) => {
+  app.post("/auth/login", wrapHandler(async (request, reply) => {
     const { email, password } = request.body as {
       email: string;
       password: string;
@@ -92,6 +82,13 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       });
       return;
     }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      reply.code(400).send({
+        success: false,
+        error: { message: "Format email tidak valid", code: "VALIDATION_ERROR" },
+      });
+      return;
+    }
     if (password.length > 128) {
       reply.code(400).send({
         success: false,
@@ -100,28 +97,17 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       return;
     }
 
-    try {
-      const user = await authService.login(trimmedEmail, password);
-      const token = app.jwt.sign({ id: user.id }, { expiresIn: "7d" });
+    const user = await authService.login(trimmedEmail, password);
+    const token = app.jwt.sign({ id: user.id }, { expiresIn: "7d" });
 
-      reply.setCookie("token", token, {
-        httpOnly: true,
-        secure: process.env["NODE_ENV"] === "production",
-        sameSite: "lax",
-        path: "/",
-        maxAge: 7 * 24 * 60 * 60, // 7 days
-      });
+    reply.setCookie("token", token, {
+      httpOnly: true,
+      secure: process.env["NODE_ENV"] === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 7 * 24 * 60 * 60, // 7 days
+    });
 
-      reply.send({ success: true, data: { token, user } });
-    } catch (err) {
-      if (err instanceof authService.AuthError) {
-        reply.code(err.statusCode).send({
-          success: false,
-          error: { message: err.message, code: err.code },
-        });
-        return;
-      }
-      throw err;
-    }
-  });
+    reply.send({ success: true, data: { token, user } });
+  }));
 };

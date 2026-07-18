@@ -1,11 +1,12 @@
 import type { FastifyPluginAsync, FastifyRequest, FastifyReply } from "fastify";
 import * as tournamentService from "../services/tournament.service";
 import * as bracketService from "../services/bracket.service";
+import { wrapHandler } from "../utils/route-handler";
 
 export const tournamentRoutes: FastifyPluginAsync<{ requireAuth: (req: FastifyRequest, reply: FastifyReply) => Promise<void> }> = async (app, opts) => {
   const auth = opts.requireAuth;
 
-  app.post("/tournaments", { onRequest: [auth] }, async (request, reply) => {
+  app.post("/tournaments", { onRequest: [auth] }, wrapHandler(async (request, reply) => {
     const body = request.body as { name?: string; sport?: string; format?: string };
     const name = body.name?.trim() ?? "";
     const sport = body.sport?.trim() ?? "";
@@ -23,44 +24,22 @@ export const tournamentRoutes: FastifyPluginAsync<{ requireAuth: (req: FastifyRe
       });
       return;
     }
-    try {
-      const tournament = await tournamentService.createTournament(request.userId, { name, sport, format: body.format });
-      reply.code(201).send({ success: true, data: tournament });
-    } catch (err) {
-      if (err instanceof tournamentService.TournamentError) {
-        reply.code(err.statusCode).send({
-          success: false,
-          error: { message: err.message, code: err.code },
-        });
-        return;
-      }
-      throw err;
-    }
-  });
+    const tournament = await tournamentService.createTournament(request.userId, { name, sport, format: body.format });
+    reply.code(201).send({ success: true, data: tournament });
+  }));
 
-  app.get("/tournaments", { onRequest: [auth] }, async (request, reply) => {
+  app.get("/tournaments", { onRequest: [auth] }, wrapHandler(async (request, reply) => {
     const tournaments = await tournamentService.listTournaments(request.userId);
     reply.send({ success: true, data: tournaments });
-  });
+  }));
 
-  app.get("/tournaments/:id", { onRequest: [auth] }, async (request, reply) => {
+  app.get("/tournaments/:id", { onRequest: [auth] }, wrapHandler(async (request, reply) => {
     const { id } = request.params as { id: string };
-    try {
-      const tournament = await tournamentService.getTournament(id, request.userId);
-      reply.send({ success: true, data: tournament });
-    } catch (err) {
-      if (err instanceof tournamentService.TournamentError) {
-        reply.code(err.statusCode).send({
-          success: false,
-          error: { message: err.message, code: err.code },
-        });
-        return;
-      }
-      throw err;
-    }
-  });
+    const tournament = await tournamentService.getTournament(id, request.userId);
+    reply.send({ success: true, data: tournament });
+  }));
 
-  app.post("/tournaments/:id/teams", { onRequest: [auth] }, async (request, reply) => {
+  app.post("/tournaments/:id/teams", { onRequest: [auth] }, wrapHandler(async (request, reply) => {
     const { id } = request.params as { id: string };
     const body = request.body as { name?: string };
     const teamName = body.name?.trim() ?? "";
@@ -71,73 +50,29 @@ export const tournamentRoutes: FastifyPluginAsync<{ requireAuth: (req: FastifyRe
       });
       return;
     }
-    try {
-      const team = await tournamentService.addTeam(id, request.userId, teamName);
-      reply.code(201).send({ success: true, data: team });
-    } catch (err) {
-      if (err instanceof tournamentService.TournamentError) {
-        reply.code(err.statusCode).send({
-          success: false,
-          error: { message: err.message, code: err.code },
-        });
-        return;
-      }
-      throw err;
-    }
-  });
+    const team = await tournamentService.addTeam(id, request.userId, teamName);
+    reply.code(201).send({ success: true, data: team });
+  }));
 
-  app.delete("/tournaments/:id/teams/:teamId", { onRequest: [auth] }, async (request, reply) => {
+  app.delete("/tournaments/:id/teams/:teamId", { onRequest: [auth] }, wrapHandler(async (request, reply) => {
     const { id, teamId } = request.params as { id: string; teamId: string };
-    try {
-      await tournamentService.deleteTeam(id, teamId, request.userId);
-      reply.send({ success: true, data: null });
-    } catch (err) {
-      if (err instanceof tournamentService.TournamentError) {
-        reply.code(err.statusCode).send({
-          success: false,
-          error: { message: err.message, code: err.code },
-        });
-        return;
-      }
-      throw err;
-    }
-  });
+    await tournamentService.deleteTeam(id, teamId, request.userId);
+    reply.send({ success: true, data: null });
+  }));
 
-  app.post("/tournaments/:id/generate-bracket", { onRequest: [auth] }, async (request, reply) => {
+  app.post("/tournaments/:id/generate-bracket", { onRequest: [auth] }, wrapHandler(async (request, reply) => {
     const { id } = request.params as { id: string };
-    try {
-      const matches = await bracketService.generateBracket(id, request.userId);
-      reply.send({ success: true, data: matches });
-    } catch (err) {
-      if (err instanceof bracketService.BracketError) {
-        reply.code(err.statusCode).send({
-          success: false,
-          error: { message: err.message, code: err.code },
-        });
-        return;
-      }
-      throw err;
-    }
-  });
+    const matches = await bracketService.generateBracket(id, request.userId);
+    reply.send({ success: true, data: matches });
+  }));
 
-  app.patch("/matches/:id/start", { onRequest: [auth] }, async (request, reply) => {
+  app.patch("/matches/:id/start", { onRequest: [auth] }, wrapHandler(async (request, reply) => {
     const { id } = request.params as { id: string };
-    try {
-      const match = await bracketService.startMatch(id, request.userId);
-      reply.send({ success: true, data: match });
-    } catch (err) {
-      if (err instanceof bracketService.BracketError) {
-        reply.code(err.statusCode).send({
-          success: false,
-          error: { message: err.message, code: err.code },
-        });
-        return;
-      }
-      throw err;
-    }
-  });
+    const match = await bracketService.startMatch(id, request.userId);
+    reply.send({ success: true, data: match });
+  }));
 
-  app.patch("/matches/:id/score", { onRequest: [auth] }, async (request, reply) => {
+  app.patch("/matches/:id/score", { onRequest: [auth] }, wrapHandler(async (request, reply) => {
     const { id } = request.params as { id: string };
     const body = request.body as { homeScore?: number; awayScore?: number };
     if (body.homeScore === undefined || body.awayScore === undefined) {
@@ -147,32 +82,7 @@ export const tournamentRoutes: FastifyPluginAsync<{ requireAuth: (req: FastifyRe
       });
       return;
     }
-    if (!Number.isInteger(body.homeScore) || !Number.isInteger(body.awayScore)) {
-      reply.code(400).send({
-        success: false,
-        error: { message: "Skor harus berupa bilangan bulat", code: "VALIDATION_ERROR" },
-      });
-      return;
-    }
-    if (body.homeScore < 0 || body.awayScore < 0) {
-      reply.code(400).send({
-        success: false,
-        error: { message: "Skor tidak boleh negatif", code: "VALIDATION_ERROR" },
-      });
-      return;
-    }
-    try {
-      const match = await bracketService.updateMatchScore(id, request.userId, body.homeScore, body.awayScore);
-      reply.send({ success: true, data: match });
-    } catch (err) {
-      if (err instanceof bracketService.BracketError) {
-        reply.code(err.statusCode).send({
-          success: false,
-          error: { message: err.message, code: err.code },
-        });
-        return;
-      }
-      throw err;
-    }
-  });
+    const match = await bracketService.updateMatchScore(id, request.userId, body.homeScore, body.awayScore);
+    reply.send({ success: true, data: match });
+  }));
 };

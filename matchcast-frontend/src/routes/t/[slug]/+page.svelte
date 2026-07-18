@@ -1,33 +1,39 @@
 <script lang="ts">
-  import { onMount, onDestroy } from "svelte";
+  import { onDestroy } from "svelte";
   import { page } from "$app/state";
   import { getPublicTournament } from "$lib/api/tournament";
+  import type { Tournament } from "$lib/api/tournament";
   import Bracket from "$lib/components/ui/bracket.svelte";
 
-  const slug = $derived(page.params.slug);
+  let {
+    data,
+  }: {
+    data: { tournament: Tournament | null; error: boolean };
+  } = $props();
 
-  let tournament = $state<Tournament | null>(null);
-  let loading = $state(true);
-  let error = $state("");
-  let pollInterval: ReturnType<typeof setInterval> | undefined;
+  let tournament = $state<Tournament | null>(data.tournament);
+  let error = $state(data.error ? "Tournament not found" : "");
 
-  async function load() {
+  let pollTimer: ReturnType<typeof setTimeout> | undefined;
+
+  async function poll() {
     try {
-      tournament = await getPublicTournament(slug);
+      tournament = await getPublicTournament(page.params.slug!);
+      error = "";
     } catch (e) {
-      error = e instanceof Error ? e.message : "Failed to load tournament";
+      // silently retry
     } finally {
-      loading = false;
+      pollTimer = setTimeout(poll, 12000);
     }
   }
 
-  onMount(() => {
-    load();
-    pollInterval = setInterval(load, 12000);
+  $effect(() => {
+    if (!error) pollTimer = setTimeout(poll, 12000);
+    return () => { if (pollTimer) clearTimeout(pollTimer); };
   });
 
   onDestroy(() => {
-    if (pollInterval) clearInterval(pollInterval);
+    if (pollTimer) clearTimeout(pollTimer);
   });
 </script>
 
@@ -62,7 +68,7 @@
         </summary>
         <div class="mt-2 flex flex-wrap gap-2">
           {#each tournament.teams as team}
-            <span class="bg-bg-surface clipped-sm border-border-subtle text-text-primary px-3 py-1 text-sm uppercase tracking-wide" style="border: 1px solid #2A3142;">
+            <span class="bg-bg-surface clipped-sm border-border-subtle text-text-primary px-3 py-1 text-sm uppercase tracking-wide" style="border-color: var(--color-border-subtle); border-width: 1px; border-style: solid;">
               {team.name}
             </span>
           {/each}

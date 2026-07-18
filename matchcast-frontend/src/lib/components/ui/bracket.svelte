@@ -153,11 +153,11 @@
       left: 100%;
       width: 2rem;
       height: 2px;
-      background: #2A3142;
+      background: var(--color-border-subtle);
     }
 
     .bracket-match::after {
-      background: #5B6EF5;
+      background: var(--color-accent-primary);
     }
 
     .bracket-col:last-child .bracket-match::after {
@@ -176,13 +176,13 @@
       width: 2px;
       height: 0.75rem;
       margin: 0 auto;
-      background: #2A3142;
+      background: var(--color-border-subtle);
       transition: background 0.3s;
     }
 
     .bracket-line-top.active,
     .bracket-line-bottom.active {
-      background: #5B6EF5;
+      background: var(--color-accent-primary);
     }
   }
 </style>

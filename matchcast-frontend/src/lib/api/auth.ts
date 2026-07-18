@@ -1,18 +1,10 @@
+import type { ApiSuccess, ApiErrorResponse } from "$lib/types";
+
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
 interface AuthResponse {
   token: string;
   user: { id: string; email: string; name: string; createdAt: string };
-}
-
-interface ApiSuccess<T> {
-  success: true;
-  data: T;
-}
-
-interface ApiErrorResponse {
-  success: false;
-  error: { message: string; code: string };
 }
 
 export async function apiRegister(email: string, password: string, name: string) {

@@ -3,15 +3,9 @@ import { hash, compare } from "bcryptjs";
 
 const SALT_ROUNDS = 12;
 
-export class AuthError extends Error {
-  constructor(
-    message: string,
-    public code: string,
-    public statusCode = 400,
-  ) {
-    super(message);
-  }
-}
+import { DomainError } from "../utils/route-handler";
+
+export class AuthError extends DomainError {}
 
 export async function register(email: string, password: string, name: string) {
   const existing = await prisma.user.findUnique({ where: { email } });
