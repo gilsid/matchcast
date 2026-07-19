@@ -31,7 +31,7 @@ jobs:
         working-directory: matchcast-backend
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -70,7 +70,7 @@ jobs:
         working-directory: matchcast-frontend
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: oven-sh/setup-bun@v2
         with:
