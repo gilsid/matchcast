@@ -4,13 +4,15 @@ import { DomainError } from "../utils/route-handler";
 
 export class BracketError extends DomainError {}
 
-function nextPowerOf2(n: number): number {
+/* ponytail: exported for testing */
+export function nextPowerOf2(n: number): number {
   let p = 1;
   while (p < n) p <<= 1;
   return p;
 }
 
-function shuffleArray<T>(array: T[]): T[] {
+/* ponytail: exported for testing */
+export function shuffleArray<T>(array: T[]): T[] {
   const arr = [...array];
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
