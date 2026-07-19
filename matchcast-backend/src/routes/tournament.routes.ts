@@ -82,6 +82,13 @@ export const tournamentRoutes: FastifyPluginAsync<{ requireAuth: (req: FastifyRe
       });
       return;
     }
+    if (!Number.isInteger(body.homeScore) || !Number.isInteger(body.awayScore)) {
+      reply.code(400).send({
+        success: false,
+        error: { message: "Scores must be integers", code: "VALIDATION_ERROR" },
+      });
+      return;
+    }
     const match = await bracketService.updateMatchScore(id, request.userId, body.homeScore, body.awayScore);
     reply.send({ success: true, data: match });
   }));

@@ -480,12 +480,16 @@ test.describe("API error paths", () => {
     const body = await res.json();
     expect(res.status()).toBe(200);
     expect(body.success).toBe(true);
-    expect(Array.isArray(body.data)).toBe(true);
-    expect(body.data.length).toBe(3);
+    expect(body.data).toHaveProperty("matches");
+    expect(Array.isArray(body.data.matches)).toBe(true);
+    expect(body.data.matches.length).toBe(3);
+    expect(body.data.pagination).toHaveProperty("page", 1);
+    expect(body.data.pagination).toHaveProperty("limit", 50);
+    expect(body.data.pagination.total).toBeGreaterThanOrEqual(3);
 
     // Count total filled team slots = all 4 teams appear in round 1
     const filledSlots = new Set<string>();
-    for (const m of body.data) {
+    for (const m of body.data.matches) {
       expect(m.tournamentId).toBe(t.id);
       expect(typeof m.round).toBe("number");
       expect(typeof m.matchOrder).toBe("number");
