@@ -101,6 +101,7 @@ Match      id, round, matchOrder, homeTeamId→Team?, awayTeamId→Team?,
 ## 6. Token Desain
 
 **Warna (dari layout.css `@theme`):**
+
 ```
 bg-base: #0B0E14        bg-surface: #161B26
 border-subtle: #2A3142  accent-primary: #5B6EF5  accent-live: #FFB020
@@ -123,6 +124,7 @@ destructive: #E54B4B
 ## 8. Command Penting
 
 ### Backend (matchcast-backend/)
+
 ```
 bun run src/index.ts      # dev server (port 3001)
 bun run start             # production start
@@ -146,9 +148,26 @@ bunx prisma studio        # GUI database
 ## 10. Prisma Atomic Patterns
 
 - **updateMany with where guard:** prefer `updateMany({ where: { id, status: "X" }, data: { status: "Y" } })` over `findUnique`+check+`update` — race-safe
-- **$transaction for multi-step writes:** score + propagateWinner + finish check in one `$transaction`; pass `tx: Prisma.TransactionClient` to helpers
+- **$transaction for multi-step writes:** score + propagateWinner + finish check in one `$transaction`; pass`tx: Prisma.TransactionClient` to helpers
 - **TransactionClient type:** `import type { Prisma } from "../generated/prisma/client"` → `Prisma.TransactionClient`
 - **Neon migrations:** `DATABASE_URL_UNPOOLED` (direct, non-pooled) required for `directUrl` in schema — migrations fail with pooled URL
 - **Match state machine:** `scheduled → ongoing → finished`. Score endpoint gates on `"ongoing"`, not `{ not: "finished" }`
 - **APIResponse cookie extraction:** use `res.headersArray().filter(h => h.name === "set-cookie")` — `headerValues()` doesn't exist on `APIRequestContext` responses
 - **Race test pattern:** `Promise.allSettled` → filter by status code → assert `successCount === 1, failCount === N-1`
+
+<!-- BEGIN:workflow -->
+## Git workflow (Wajib!)
+
+- **GitHub Flow:** `main` = production. Setiap kerja bikin branch baru dari `main`.
+- Saat user bilang "kerjain X" / "bikin Y": `git checkout main && git pull && git checkout -b <tipe>/<nama>` otomatis.
+  - Tipe branch sesuai konteks:
+    - `feat/` — fitur baru
+    - `fix/` — perbaikan bug
+    - `refactor/` — refaktor kode
+    - `docs/` — dokumentasi
+    - `chore/` — maintenance, config, dependency
+    - `style/` — styling, UI (bukan logika)
+- Selesai → push + buat PR ke `main`. Jangan merge sendiri. Delete branch setelah merge.
+- Waktu bikin PR: body description pake `-F` atau `--body-file`, jangan pakai `\n` di string literal biar line breaks beneran.
+- `dev` branch udah ga dipake. Pakai `main` sebagai base.
+<!-- END:workflow -->
