@@ -39,8 +39,6 @@ jobs:
 
       - run: bun install
 
-      - run: bun run typecheck
-
       - run: bunx prisma generate
         env:
           DATABASE_URL: postgresql://test:test@localhost:5432/test
@@ -49,6 +47,10 @@ jobs:
         env:
           DATABASE_URL: postgresql://test:test@localhost:5432/test
           DATABASE_URL_UNPOOLED: postgresql://test:test@localhost:5432/test
+
+      - run: bun run typecheck
+
+      - run: bun run test:unit
 
       - run: bun run test
         env:
@@ -80,6 +82,6 @@ jobs:
 
       - run: bun run build
 
-      - run: bun run test
+      - run: bun run test:unit
         env:
           VITE_API_URL: http://localhost:3001
