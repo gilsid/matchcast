@@ -167,7 +167,6 @@ bunx prisma studio        # GUI database
     - `docs/` — dokumentasi
     - `chore/` — maintenance, config, dependency
     - `style/` — styling, UI (bukan logika)
-- Selesai → push + buat PR ke `main`. Jangan merge sendiri. Delete branch setelah merge.
+- Selesai → push + buat PR ke `main`. Merge sendiri. Delete branch setelah merge.
 - Waktu bikin PR: body description pake `-F` atau `--body-file`, jangan pakai `\n` di string literal biar line breaks beneran.
-- `dev` branch udah ga dipake. Pakai `main` sebagai base.
 <!-- END:workflow -->
