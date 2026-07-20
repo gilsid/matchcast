@@ -61,7 +61,8 @@ function generateRoundMatches(
   const matches: RoundMatch[] = [];
   let matchOrder = matchOrderStart;
 
-  const propagateSlots = r === 2 ? calcPropagateSlots(round1Matches) : new Set<number>();
+  const propagateSlots =
+    r === 2 ? calcPropagateSlots(round1Matches) : new Set<number>();
 
   const byeTeams = r === 2 ? seedTeams.slice(0, byes) : [];
   let byeIdx = 0;
@@ -121,7 +122,14 @@ function planBracketMatches(
   // Rounds 2..totalRounds
   let prevRoundMatches = round1Matches + byes;
   for (let r = 2; r <= totalRounds; r++) {
-    const result = generateRoundMatches(r, seeds, byes, round1Matches, prevRoundMatches, matchOrder);
+    const result = generateRoundMatches(
+      r,
+      seeds,
+      byes,
+      round1Matches,
+      prevRoundMatches,
+      matchOrder,
+    );
     matches.push(...result.matches);
     matchOrder = result.matchOrderEnd;
     prevRoundMatches = prevRoundMatches / 2;
@@ -142,7 +150,11 @@ export async function generateBracket(tournamentId: string, ownerId: string) {
     }
 
     if (tournament.teams.length < 2) {
-      throw new BracketError("Minimum 2 teams required", "NOT_ENOUGH_TEAMS", 400);
+      throw new BracketError(
+        "Minimum 2 teams required",
+        "NOT_ENOUGH_TEAMS",
+        400,
+      );
     }
 
     // Shuffle teams for random seeding
@@ -178,7 +190,11 @@ export async function generateBracket(tournamentId: string, ownerId: string) {
         data: { status: "ongoing" },
       });
       if (locked.count === 0) {
-        throw new BracketError("Bracket already generated or tournament not in draft status", "BRACKET_EXISTS", 409);
+        throw new BracketError(
+          "Bracket already generated or tournament not in draft status",
+          "BRACKET_EXISTS",
+          409,
+        );
       }
 
       // Persist computed seeds
@@ -205,7 +221,11 @@ export async function generateBracket(tournamentId: string, ownerId: string) {
     });
   } catch (err) {
     if (err instanceof DomainError) throw err;
-    throw new BracketError("Internal error generating bracket", "INTERNAL_ERROR", 500);
+    throw new BracketError(
+      "Internal error generating bracket",
+      "INTERNAL_ERROR",
+      500,
+    );
   }
 }
 
@@ -225,11 +245,19 @@ export async function startMatch(matchId: string, ownerId: string) {
     }
 
     if (match.status !== "scheduled") {
-      throw new BracketError("Match already started or finished", "INVALID_STATUS", 400);
+      throw new BracketError(
+        "Match already started or finished",
+        "INVALID_STATUS",
+        400,
+      );
     }
 
     if (!match.homeTeamId || !match.awayTeamId) {
-      throw new BracketError("Both teams must be assigned before starting", "MISSING_TEAMS", 400);
+      throw new BracketError(
+        "Both teams must be assigned before starting",
+        "MISSING_TEAMS",
+        400,
+      );
     }
 
     // Atomic update: hanya jika status masih "scheduled" — mencegah race condition
@@ -238,13 +266,21 @@ export async function startMatch(matchId: string, ownerId: string) {
       data: { status: "ongoing" },
     });
     if (updated.count === 0) {
-      throw new BracketError("Match already started or finished", "INVALID_STATUS", 400);
+      throw new BracketError(
+        "Match already started or finished",
+        "INVALID_STATUS",
+        400,
+      );
     }
 
     return prisma.match.findUnique({ where: { id: matchId } });
   } catch (err) {
     if (err instanceof DomainError) throw err;
-    throw new BracketError("Internal error starting match", "INTERNAL_ERROR", 500);
+    throw new BracketError(
+      "Internal error starting match",
+      "INTERNAL_ERROR",
+      500,
+    );
   }
 }
 
@@ -273,16 +309,29 @@ export async function updateMatchScore(
     }
 
     if (homeScore < 0 || awayScore < 0) {
-      throw new BracketError("Scores cannot be negative", "VALIDATION_ERROR", 400);
+      throw new BracketError(
+        "Scores cannot be negative",
+        "VALIDATION_ERROR",
+        400,
+      );
     }
 
     if (homeScore === awayScore) {
-      throw new BracketError("Scores cannot be tied in knockout", "TIED_SCORE", 400);
+      throw new BracketError(
+        "Scores cannot be tied in knockout",
+        "TIED_SCORE",
+        400,
+      );
     }
 
-    const winnerTeamId = homeScore > awayScore ? match.homeTeamId : match.awayTeamId;
+    const winnerTeamId =
+      homeScore > awayScore ? match.homeTeamId : match.awayTeamId;
     if (!winnerTeamId) {
-      throw new BracketError("Cannot determine winner: missing team", "MISSING_TEAM", 400);
+      throw new BracketError(
+        "Cannot determine winner: missing team",
+        "MISSING_TEAM",
+        400,
+      );
     }
 
     // Atomic score update + propagate + tournament-finish in single transaction
@@ -297,7 +346,11 @@ export async function updateMatchScore(
         },
       });
       if (updatedBatch.count === 0) {
-        throw new BracketError("Match already finished", "ALREADY_FINISHED", 400);
+        throw new BracketError(
+          "Match already finished",
+          "ALREADY_FINISHED",
+          400,
+        );
       }
 
       const updated = await tx.match.findUnique({
@@ -329,7 +382,11 @@ export async function updateMatchScore(
     return updatedMatch;
   } catch (err) {
     if (err instanceof DomainError) throw err;
-    throw new BracketError("Internal error updating score", "INTERNAL_ERROR", 500);
+    throw new BracketError(
+      "Internal error updating score",
+      "INTERNAL_ERROR",
+      500,
+    );
   }
 }
 
@@ -365,7 +422,11 @@ async function propagateWinner(
         data: { awayTeamId: winnerTeamId },
       });
     } else {
-      throw new BracketError("Next round match already has both teams assigned", "BRACKET_CORRUPT", 500);
+      throw new BracketError(
+        "Next round match already has both teams assigned",
+        "BRACKET_CORRUPT",
+        500,
+      );
     }
   } else {
     // Winner goes to away slot if empty, else home
@@ -380,7 +441,11 @@ async function propagateWinner(
         data: { homeTeamId: winnerTeamId },
       });
     } else {
-      throw new BracketError("Next round match already has both teams assigned", "BRACKET_CORRUPT", 500);
+      throw new BracketError(
+        "Next round match already has both teams assigned",
+        "BRACKET_CORRUPT",
+        500,
+      );
     }
   }
 
