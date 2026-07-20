@@ -1,51 +1,51 @@
 # Matchcast
 
-Platform manajemen turnamen olahraga amatir. Penyelenggara buat bracket, kelola skor, peserta/penonton lihat jadwal & skor real-time via link publik — tanpa login.
+Platform manajemen turnamen olahraga amatir. Penyelenggara buat bracket, kelola
+skor, peserta/penonton lihat jadwal & skor real-time via link publik — tanpa
+login.
 
 ## Tech Stack
 
 | Lapisan | Stack |
-| --------- | ------- |
+| --- | --- |
 | Frontend | SvelteKit 2 + TypeScript + Tailwind CSS 4 + shadcn-svelte |
 | Backend | Fastify 5 + TypeScript + Prisma 7 |
 | Database | PostgreSQL (Neon production) |
 | Runtime | Bun |
 | Auth | JWT via `@fastify/jwt`, httpOnly cookie, bcryptjs |
 | Testing | Playwright (API E2E) + Vitest (unit/component) |
-| CI | GitHub Actions — typecheck + unit test + Playwright test |
+| CI | GitHub Actions — typecheck + unit + Playwright |
 | Font | Inter, Oswald, JetBrains Mono via @fontsource |
 | Ikon | svelte-radix |
 
 ## Struktur Folder
 
-```
+```text
 matchcast/
-├── AGENTS.md              # Petunjuk untuk AI coding agent
+├── AGENTS.md
 ├── README.md
-├── specs/                 # Dokumentasi & improvement plan
-├── .github/workflows/     # CI (test.yml)
-├── matchcast-frontend/    # SvelteKit app
-│   ├── src/routes/        # Halaman (/, /login, /register, /dashboard, /tournaments/[id], /t/[slug], +error)
+├── specs/
+├── .github/workflows/
+├── matchcast-frontend/
+│   ├── src/routes/
 │   ├── src/lib/
-│   │   ├── api/           # API client (auth, health, tournament)
-│   │   ├── components/ui/ # Komponen (bracket, score-modal, button, card, input, skeleton, spinner)
-│   │   │   └── __tests__/ # Vitest component tests
+│   │   ├── api/
+│   │   ├── components/ui/
+│   │   │   └── __tests__/
 │   │   └── types/
 │   └── vitest.config.ts
-└── matchcast-backend/     # Fastify API
+└── matchcast-backend/
     ├── src/
     │   ├── index.ts
-    │   ├── prisma-client.ts   # PrismaClient singleton + pg adapter
-    │   ├── plugins/           # auth plugin (JWT verify)
-    │   ├── routes/            # health, auth, tournament, public
-    │   ├── services/          # auth, tournament, bracket
-    │   │   └── __tests__/     # Vitest unit tests
-    │   └── generated/prisma/  # Prisma client (generated)
+    │   ├── prisma-client.ts
+    │   ├── plugins/
+    │   ├── routes/
+    │   ├── services/
+    │   │   └── __tests__/
+    │   └── generated/prisma/
     ├── prisma/
-    │   ├── schema.prisma
-    │   └── migrations/
-    ├── prisma.config.ts       # Prisma 7 config (no url/directUrl in schema)
-    ├── tests/                 # Playwright API tests (4 spec files)
+    ├── prisma.config.ts
+    ├── tests/
     ├── vitest.config.ts
     └── playwright.config.ts
 ```
@@ -55,7 +55,7 @@ matchcast/
 ### Prasyarat
 
 - Bun (package manager)
-- PostgreSQL berjalan lokal (atau via Docker)
+- PostgreSQL lokal (atau Docker)
 
 ### 1. Clone & Install
 
@@ -69,11 +69,11 @@ cd matchcast
 ```bash
 # Backend
 cp matchcast-backend/.env.example matchcast-backend/.env
-# Edit matchcast-backend/.env — isi DATABASE_URL sesuai koneksi PostgreSQL
+# Edit DATABASE_URL sesuai koneksi PostgreSQL
 
 # Frontend
 cp matchcast-frontend/.env.example matchcast-frontend/.env
-# Default VITE_API_URL=http://localhost:3001 sudah sesuai
+# Default VITE_API_URL=http://localhost:3001
 ```
 
 ### 3. Install Dependencies
@@ -94,7 +94,7 @@ cd ..
 
 ### 5. Jalankan Dev Server
 
-Dua terminal terpisah:
+Dua terminal:
 
 ```bash
 # Terminal 1 — Backend (port 3001)
@@ -104,7 +104,7 @@ cd matchcast-backend && bun run dev
 cd matchcast-frontend && bun run dev
 ```
 
-Buka `http://localhost:5173` di browser.
+Buka `http://localhost:5173`.
 
 ## Testing
 
@@ -113,13 +113,13 @@ Buka `http://localhost:5173` di browser.
 ```bash
 cd matchcast-backend
 
-# Unit & integration tests (Vitest)
+# Unit & integration (Vitest)
 bun run test:unit
 
-# API E2E tests (Playwright — requires DB + JWT_SECRET)
+# API E2E (Playwright — requires DB + JWT_SECRET)
 bun run test
 
-# Playwright + typecheck
+# All: typecheck + Playwright
 bun run test:ci
 ```
 
@@ -128,22 +128,22 @@ bun run test:ci
 ```bash
 cd matchcast-frontend
 
-# Component tests (Vitest, standalone, no browser needed)
+# Component tests (Vitest, standalone)
 bun run test:unit
 
-# Responsive E2E tests (Playwright — requires build)
+# Responsive E2E (Playwright — requires build)
 bun run test
 ```
 
 ### CI
 
-Setiap push/PR ke `main` otomatis menjalankan:
+Setiap push/PR ke `main`:
 
-1. Backend: typecheck → unit test → Playwright test (dengan PostgreSQL container)
+1. Backend: typecheck → unit test → Playwright (PostgreSQL container)
 2. Frontend: svelte-kit sync → build → unit test
 
 ## Deployment
 
-- **DB:** Neon (serverless PostgreSQL) — koneksi via `DATABASE_URL`
-- **Migrations:** `bun run build` (Prisma generate + migrate deploy)
-- **Production start:** `bun run start` di backend
+- **DB:** Neon serverless PostgreSQL via `DATABASE_URL`
+- **Migrations:** `bun run build` (generate + migrate deploy)
+- **Production:** `bun run start` di backend
