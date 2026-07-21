@@ -10,6 +10,16 @@ jobs:
   backend-test:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
+
+    env:
+      DATABASE_URL: "postgresql://test:test@localhost:5432/test"
+      DATABASE_URL_UNPOOLED: "postgresql://test:test@localhost:5432/test"
+      JWT_SECRET: ci-test-secret-not-for-production
+      NODE_ENV: test
+      AUTH_RATE_LIMIT: "100"
+      CORS_ORIGIN: "http://localhost:5173"
 
     services:
       postgres:
@@ -31,48 +41,38 @@ jobs:
         working-directory: matchcast-backend
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version: latest
 
       - run: bun install
 
       - run: bunx prisma generate
-        env:
-          DATABASE_URL: postgresql://test:test@localhost:5432/test
 
       - run: bunx prisma migrate deploy
-        env:
-          DATABASE_URL: postgresql://test:test@localhost:5432/test
-          DATABASE_URL_UNPOOLED: postgresql://test:test@localhost:5432/test
 
       - run: bun run typecheck
 
       - run: bun run test:unit
 
       - run: bun run test
-        env:
-          DATABASE_URL: postgresql://test:test@localhost:5432/test
-          DATABASE_URL_UNPOOLED: postgresql://test:test@localhost:5432/test
-          JWT_SECRET: ci-test-secret-not-for-production
-          NODE_ENV: test
-          AUTH_RATE_LIMIT: "100"
-          CORS_ORIGIN: http://localhost:5173
 
   frontend-test:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
 
     defaults:
       run:
         working-directory: matchcast-frontend
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version: latest
 
@@ -81,6 +81,8 @@ jobs:
       - run: bunx svelte-kit sync
 
       - run: bun run build
+
+      - run: bun run check
 
       - run: bun run test:unit
         env:

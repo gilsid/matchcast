@@ -7,6 +7,8 @@
 # Playwright
 matchcast-backend/test-results/
 matchcast-backend/playwright-report/
+matchcast-frontend/test-results/
+matchcast-frontend/playwright-report/
 
 # Agent temp data
 .pi-subagents/
