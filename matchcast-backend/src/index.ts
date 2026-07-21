@@ -4,12 +4,12 @@ import fjwt from "@fastify/jwt";
 import fcookie from "@fastify/cookie";
 
 const DEV_SECRET = "dev-secret-change-in-production";
-import { healthRoutes } from "./routes/health.routes.js";
-import { authRoutes } from "./routes/auth.routes.js";
-import { tournamentRoutes } from "./routes/tournament.routes.js";
-import { matchRoutes } from "./routes/match.routes.js";
-import { publicRoutes } from "./routes/public.routes.js";
-import { makeOnRequestAuth } from "./plugins/auth.js";
+import { healthRoutes } from "./routes/health.routes";
+import { authRoutes } from "./routes/auth.routes";
+import { tournamentRoutes } from "./routes/tournament.routes";
+import { matchRoutes } from "./routes/match.routes";
+import { publicRoutes } from "./routes/public.routes";
+import { makeOnRequestAuth } from "./plugins/auth";
 
 const app = Fastify({ logger: true });
 

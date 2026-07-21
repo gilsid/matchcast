@@ -1,8 +1,8 @@
 import type { FastifyPluginAsync, FastifyRequest, FastifyReply } from "fastify";
 import rateLimit from "@fastify/rate-limit";
-import * as tournamentService from "../services/tournament.service.js";
-import * as bracketService from "../services/bracket.service.js";
-import { wrapHandler } from "../utils/route-handler.js";
+import * as tournamentService from "../services/tournament.service";
+import * as bracketService from "../services/bracket.service";
+import { wrapHandler } from "../utils/route-handler";
 
 export const publicRoutes: FastifyPluginAsync = async (app) => {
 	await app.register(rateLimit, {

@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync, FastifyRequest, FastifyReply } from "fastify";
 import rateLimit from "@fastify/rate-limit";
-import * as authService from "../services/auth.service.js";
-import { wrapHandler } from "../utils/route-handler.js";
+import * as authService from "../services/auth.service";
+import { wrapHandler } from "../utils/route-handler";
 
 function validationError(reply: FastifyReply, message: string) {
 	reply.code(400).send({
