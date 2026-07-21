@@ -3,104 +3,90 @@
 @import '@fontsource/oswald';
 @import '@fontsource/jetbrains-mono';
 
+/* pi-lens-ignore:unknownAtRules */
 @plugin '@tailwindcss/typography';
 
+/* pi-lens-ignore:unknownAtRules */
 @custom-variant dark (&:is(.dark *));
 
+/* pi-lens-ignore:unknownAtRules */
 @theme {
-  --font-display: 'Oswald', sans-serif;
-  --font-body: 'Inter', sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+	--font-display: 'Oswald', sans-serif;
+	--font-body: 'Inter', sans-serif;
+	--font-mono: 'JetBrains Mono', monospace;
 
-  --color-bg-base: #0B0E14;
-  --color-bg-surface: #161B26;
-  --color-border-subtle: #2A3142;
-  --color-accent-primary: #5B6EF5;
-  --color-accent-live: #FFB020;
-  --color-text-primary: #E8EAF0;
-  --color-text-muted: #8890A6;
+	--color-bg-base: #0b0e14;
+	--color-bg-surface: #161b26;
+	--color-border-subtle: #2a3142;
+	--color-accent-primary: #5b6ef5;
+	--color-accent-live: #ffb020;
+	--color-text-primary: #e8eaf0;
+	--color-text-muted: #8890a6;
 
-  --color-background: #0B0E14;
-  --color-foreground: #E8EAF0;
-  --color-card: #161B26;
-  --color-card-foreground: #E8EAF0;
-  --color-popover: #161B26;
-  --color-popover-foreground: #E8EAF0;
-  --color-primary: #5B6EF5;
-  --color-primary-foreground: #E8EAF0;
-  --color-secondary: #2A3142;
-  --color-secondary-foreground: #8890A6;
-  --color-muted: #2A3142;
-  --color-muted-foreground: #8890A6;
-  --color-accent: #5B6EF5;
-  --color-accent-foreground: #E8EAF0;
-  --color-destructive: #E54B4B;
-  --color-destructive-foreground: #E8EAF0;
-  --color-border: #2A3142;
-  --color-input: #2A3142;
-  --color-ring: #5B6EF5;
-  --radius: 0;
+	--color-background: #0b0e14;
+	--color-foreground: #e8eaf0;
+	--color-card: #161b26;
+	--color-card-foreground: #e8eaf0;
+	--color-popover: #161b26;
+	--color-popover-foreground: #e8eaf0;
+	--color-primary: #5b6ef5;
+	--color-primary-foreground: #e8eaf0;
+	--color-secondary: #2a3142;
+	--color-secondary-foreground: #8890a6;
+	--color-muted: #2a3142;
+	--color-muted-foreground: #8890a6;
+	--color-accent: #5b6ef5;
+	--color-accent-foreground: #e8eaf0;
+	--color-destructive: #e54b4b;
+	--color-destructive-foreground: #e8eaf0;
+	--color-border: #2a3142;
+	--color-input: #2a3142;
+	--color-ring: #5b6ef5;
+	--radius: 0;
 }
 
 html {
-  font-family: 'Inter', sans-serif;
-  background-color: #0B0E14;
-  color: #E8EAF0;
+	font-family: 'Inter', sans-serif;
+	background-color: #0b0e14;
+	color: #e8eaf0;
 }
 
 .clipped {
-  clip-path: polygon(
-    0 0,
-    100% 0,
-    100% calc(100% - 8px),
-    calc(100% - 8px) 100%,
-    0 100%
-  );
+	clip-path: polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%);
 }
 
 .clipped-sm {
-  clip-path: polygon(
-    0 0,
-    100% 0,
-    100% calc(100% - 4px),
-    calc(100% - 4px) 100%,
-    0 100%
-  );
+	clip-path: polygon(0 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%);
 }
 
 @keyframes live-pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.55;
-  }
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.55;
+	}
 }
 
 .live-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: #FFB020;
-  color: #0B0E14;
-  clip-path: polygon(
-    0 0,
-    100% 0,
-    100% calc(100% - 4px),
-    calc(100% - 4px) 100%,
-    0 100%
-  );
-  font-family: 'Inter', sans-serif;
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 1px 6px;
-  animation: live-pulse 2s ease-in-out infinite;
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	background: #ffb020;
+	color: #0b0e14;
+	clip-path: polygon(0 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%);
+	font-family: 'Inter', sans-serif;
+	font-size: 0.65rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	padding: 1px 6px;
+	animation: live-pulse 2s ease-in-out infinite;
 }
 
 .scoreboard-font {
-  font-family: 'Oswald', sans-serif;
-  font-weight: 700;
-  line-height: 1;
+	font-family: 'Oswald', sans-serif;
+	font-weight: 700;
+	line-height: 1;
 }
