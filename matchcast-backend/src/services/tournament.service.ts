@@ -1,5 +1,5 @@
-import { prisma } from "../prisma-client.js";
-import { DomainError } from "../utils/route-handler.js";
+import { prisma } from "../prisma-client";
+import { DomainError } from "../utils/route-handler";
 
 export class TournamentError extends DomainError {}
 

@@ -1,6 +1,6 @@
-import { prisma } from "../prisma-client.js";
-import type { Prisma } from "../generated/prisma/client.js";
-import { DomainError } from "../utils/route-handler.js";
+import { prisma } from "../prisma-client";
+import type { Prisma } from "../generated/prisma/client";
+import { DomainError } from "../utils/route-handler";
 
 export class BracketError extends DomainError {}
 

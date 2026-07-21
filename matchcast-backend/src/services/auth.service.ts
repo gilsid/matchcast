@@ -1,9 +1,9 @@
-import { prisma } from "../prisma-client.js";
+import { prisma } from "../prisma-client";
 import { hash, compare } from "bcryptjs";
 
 const SALT_ROUNDS = 12;
 
-import { DomainError } from "../utils/route-handler.js";
+import { DomainError } from "../utils/route-handler";
 
 export class AuthError extends DomainError {}
 
