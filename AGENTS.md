@@ -15,8 +15,10 @@ tanpa login.
 | Database | PostgreSQL |
 | Runtime | Bun |
 | Auth | JWT via `@fastify/jwt`, httpOnly cookie, bcryptjs |
-| Testing API | Playwright — 5 spec files |
+| Testing API | Playwright — 6 spec files (5 backend + 1 frontend) |
 | Testing Unit | Vitest — 3 test files |
+| Linting | Prettier + ESLint (frontend) |
+| Format | Prettier (useTabs: true, singleQuote: true) |
 | Font | Inter, Oswald, JetBrains Mono via @fontsource |
 | Ikon | svelte-radix |
 | CI | GitHub Actions — typecheck + vitest + Playwright |
@@ -35,16 +37,24 @@ matchcast/
 │   ├── src/
 │   │   ├── index.ts
 │   │   ├── prisma-client.ts
-│   │   ├── plugins/auth.ts
+│   │   ├── plugins/
+│   │   │   └── auth.ts
+│   │   ├── utils/
+│   │   │   └── route-handler.ts
 │   │   ├── routes/
 │   │   │   ├── auth.routes.ts
 │   │   │   ├── health.routes.ts
-│   │   │   ├── tournament.routes.ts
-│   │   │   └── public.routes.ts
-│   │   └── services/
-│   │       ├── auth.service.ts
-│   │       ├── tournament.service.ts
-│   │       └── bracket.service.ts
+│   │   │   ├── match.routes.ts
+│   │   │   ├── public.routes.ts
+│   │   │   └── tournament.routes.ts
+│   │   ├── services/
+│   │   │   ├── auth.service.ts
+│   │   │   ├── bracket.service.ts
+│   │   │   ├── tournament.service.ts
+│   │   │   └── __tests__/
+│   │   │       └── bracket.service.test.ts
+│   │   └── generated/
+│   │       └── prisma/
 │   ├── prisma/
 │   │   ├── schema.prisma
 │   │   └── migrations/
@@ -60,36 +70,57 @@ matchcast/
 │   ├── playwright.config.ts
 │   └── package.json
 └── matchcast-frontend/
+    ├── prettier.config.js
     ├── src/
     │   ├── routes/
     │   │   ├── +layout.svelte
     │   │   ├── +page.svelte
     │   │   ├── +error.svelte
     │   │   ├── layout.css
-    │   │   ├── dashboard/+page.svelte
-    │   │   ├── login/+page.svelte
-    │   │   ├── register/+page.svelte
-    │   │   ├── t/[slug]/+page.svelte
-    │   │   └── tournaments/[id]/+page.svelte
+    │   │   ├── dashboard/
+    │   │   │   ├── +page.svelte
+    │   │   │   └── +page.ts
+    │   │   ├── login/
+    │   │   │   └── +page.svelte
+    │   │   ├── register/
+    │   │   │   └── +page.svelte
+    │   │   ├── t/[slug]/
+    │   │   │   ├── +page.svelte
+    │   │   │   └── +page.ts
+    │   │   └── tournaments/[id]/
+    │   │       ├── +page.svelte
+    │   │       └── +page.ts
     │   └── lib/
     │       ├── api/
     │       │   ├── auth.ts
     │       │   ├── health.ts
     │       │   └── tournament.ts
     │       ├── components/ui/
+    │       │   ├── auth-form.svelte
     │       │   ├── bracket.svelte
+    │       │   ├── button.svelte
+    │       │   ├── card.svelte
+    │       │   ├── card-content.svelte
+    │       │   ├── card-header.svelte
+    │       │   ├── input.svelte
+    │       │   ├── label.svelte
     │       │   ├── score-modal.svelte
     │       │   ├── skeleton.svelte
     │       │   ├── spinner.svelte
-    │       │   ├── button.svelte
-    │       │   ├── card.svelte
-    │       │   ├── input.svelte
-    │       │   ├── label.svelte
     │       │   └── __tests__/
     │       │       ├── bracket.test.ts
     │       │       └── score-modal.test.ts
-    │       └── types/index.ts
+    │       ├── types/
+    │       │   └── index.ts
+    │       ├── utils.ts
+    │       ├── index.ts
+    │       ├── assets/
+    │       │   └── favicon.svg
+    │       └── hooks/
+    ├── tests/
+    │   └── mobile-responsive.spec.ts
     ├── vitest.config.ts
+    ├── playwright.config.ts
     └── package.json
 ```
 
@@ -114,6 +145,7 @@ Match      id, round, matchOrder, homeTeamId→Team?, awayTeamId→Team?,
 | GET | `/health` | ❌ | Health check → `{success, data}` |
 | POST | `/auth/register` | ❌ | Daftar (pw max 128, rate 5/m/IP) |
 | POST | `/auth/login` | ❌ | Login (rate 5/m/IP) |
+| POST | `/auth/logout` | ❌ | Logout — clear token cookie |
 | POST | `/tournaments` | ✅ | Buat turnamen |
 | GET | `/tournaments` | ✅ | List turnamen milik user |
 | GET | `/tournaments/:id` | ✅ | Detail + teams + matches |
@@ -144,6 +176,8 @@ destructive: #E54B4B
 
 - **Response API:** semua endpoint return
   `{ success, data?, error?: { message, code } }`
+- **Error helper:** `DomainError` di `utils/route-handler.ts` — subclass dgn `message`, `code`, `statusCode`.
+  `wrapHandler(fn)` otomatis catch `DomainError` → response konsisten.
 - **Auth:** JWT via httpOnly cookie `token` atau `Authorization: Bearer`. Cookie
   otomatis di `credentials: "include"`.
 - **Penamaan file:** routes = `resource.routes.ts`, services =
@@ -153,7 +187,10 @@ destructive: #E54B4B
   punya `message`, `code`, `statusCode`. Route handler catch specific →
   reply konsisten. Error tak terduga → global `setErrorHandler` log, reply
   generic.
-- **Skor:** integer non-negatif, validasi di route handler (`Number.isInteger`).
+- **Skor:** integer non-negatif, validasi di `match.routes.ts` via `Number.isInteger`.
+- **Format code:** Prettier config di `matchcast-frontend/prettier.config.js`:
+  `useTabs: true`, `singleQuote: true`, `trailingComma: "none"`, `printWidth: 100`.
+  Frontend: `bun run format` (prettier --write). Backend: manual.
 
 ## 8. Command Penting
 
