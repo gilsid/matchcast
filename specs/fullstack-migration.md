@@ -1,7 +1,9 @@
 # Migrasi Fullstack SvelteKit (Vercel) — Panduan Agent
 
-Keputusan kunci di `docs/adr/0001-fullstack-sveltekit-vercel.md`. Glosari di `CONTEXT.md`.
-Target: satu app SvelteKit + `adapter-vercel`, `matchcast-backend/` dihapus di fase akhir.
+> **LANDED — jangan eksekusi.** Migrasi selesai dan merge ke `main`
+> (`refactor: single SvelteKit fullstack app`). File ini arsip: alasan tiap
+> fase + bug propagasi yang ditemukan saat port. Aturan jalan merujuk ke
+> `AGENTS.md`, glosari ke `CONTEXT.md`.
 
 ## 1. Tujuan & Non-tujuan
 
