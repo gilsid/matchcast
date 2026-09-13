@@ -4,19 +4,38 @@
 # Log files
 *.log
 
-# Playwright
-matchcast-backend/test-results/
-matchcast-backend/playwright-report/
-matchcast-frontend/test-results/
-matchcast-frontend/playwright-report/
-
-# Agent temp data
-.pi-subagents/
-
 # Node
 node_modules/
+
+# Output
+.output
+.vercel
+.netlify
+.wrangler
+/.svelte-kit
+/build
+/src/lib/generated/prisma
+
+# OS
+Thumbs.db
 
 # Environment files
 .env
 .env.local
 .env.*.local
+.env.*
+!.env.example
+!.env.test
+
+# Agent temp data
+.pi-subagents/
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
