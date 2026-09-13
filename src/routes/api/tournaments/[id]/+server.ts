@@ -1,12 +1,12 @@
 import type { RequestHandler } from './$types';
 import { getTournament } from '$lib/server/tournament.service';
-import { fail, failure, ok } from '$lib/server/respond';
+import { authCheck, failure, ok } from '$lib/server/respond';
 
-export const GET: RequestHandler = async ({ locals, params }) => {
-	const userId = locals.user?.id;
-	if (!userId) return fail('Unauthorized', 'UNAUTHORIZED', 401);
+export const GET: RequestHandler = async (event) => {
+	const denied = authCheck(event);
+	if (denied) return denied;
 	try {
-		return ok(await getTournament(params.id, userId));
+		return ok(await getTournament(event.params.id, event.locals.user!.id));
 	} catch (err) {
 		return failure(err);
 	}

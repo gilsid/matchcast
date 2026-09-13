@@ -1,6 +1,5 @@
 import { test, expect } from '@playwright/test';
 
-const API = process.env.API_URL || 'http://localhost:3001';
 const TEAM_NAMES = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
 test.describe('Mobile responsive — 375x667', () => {
@@ -15,12 +14,12 @@ test.describe('Mobile responsive — 375x667', () => {
 			const suffix = Date.now().toString(36);
 			const email = `mobile-${suffix}@test.com`;
 
-			const regRes = await request.post(`${API}/auth/register`, {
+			const regRes = await request.post(`/api/auth/register`, {
 				data: { email, password: 'testpass123', name: 'Mobile Tester' }
 			});
 			if (!regRes.ok()) throw new Error(`register failed: ${regRes.status()}`);
 
-			const loginRes = await request.post(`${API}/auth/login`, {
+			const loginRes = await request.post(`/api/auth/login`, {
 				data: { email, password: 'testpass123' }
 			});
 			if (!loginRes.ok()) throw new Error(`login failed: ${loginRes.status()}`);
@@ -28,7 +27,7 @@ test.describe('Mobile responsive — 375x667', () => {
 			authCookie = loginBody.data.token;
 
 			// Create tournament + add teams + generate bracket
-			const tRes = await request.post(`${API}/tournaments`, {
+			const tRes = await request.post(`/api/tournaments`, {
 				data: { name: `Mobile Test ${suffix}`, sport: 'futsal' },
 				headers: { Authorization: `Bearer ${authCookie}` }
 			});
@@ -39,14 +38,14 @@ test.describe('Mobile responsive — 375x667', () => {
 			tournamentSlug = t.slug;
 
 			for (const name of TEAM_NAMES) {
-				const teamRes = await request.post(`${API}/tournaments/${t.id}/teams`, {
+				const teamRes = await request.post(`/api/tournaments/${t.id}/teams`, {
 					data: { name: `Tim ${name}` },
 					headers: { Authorization: `Bearer ${authCookie}` }
 				});
 				if (!teamRes.ok()) throw new Error(`add team failed: ${teamRes.status()}`);
 			}
 
-			const bracketRes = await request.post(`${API}/tournaments/${t.id}/generate-bracket`, {
+			const bracketRes = await request.post(`/api/tournaments/${t.id}/generate-bracket`, {
 				data: {},
 				headers: { Authorization: `Bearer ${authCookie}` }
 			});
@@ -54,20 +53,21 @@ test.describe('Mobile responsive — 375x667', () => {
 		} catch (e) {
 			setupFailed =
 				e instanceof Error ? `setup failed: ${e.message}` : 'setup failed: unknown error';
-			// eslint-disable-next-line no-console
-			process.stderr.write(setupFailed + '\n');
+			process.stderr.write(`${setupFailed}\n`);
 		}
 	});
 
 	test.beforeEach(async ({ context }) => {
 		// Set auth cookie for authenticated pages
-		await context.addCookies([
-			{ name: 'token', value: authCookie, domain: 'localhost', path: '/' }
-		]);
+		if (authCookie) {
+			await context.addCookies([
+				{ name: 'token', value: authCookie, domain: 'localhost', path: '/' }
+			]);
+		}
 	});
 
 	test(`login page — form elements visible and tappable`, async ({ page }) => {
-		test.skip(setupFailed !== '');
+		test.skip(setupFailed !== '', setupFailed);
 		await page.goto('/login');
 		await page.waitForLoadState('networkidle');
 
@@ -93,7 +93,7 @@ test.describe('Mobile responsive — 375x667', () => {
 	});
 
 	test(`register page — form elements visible and tappable`, async ({ page }) => {
-		test.skip(setupFailed !== '');
+		test.skip(setupFailed !== '', setupFailed);
 		await page.goto('/register');
 		await page.waitForLoadState('networkidle');
 
@@ -119,10 +119,10 @@ test.describe('Mobile responsive — 375x667', () => {
 	});
 
 	test(`public tournament page — bracket readable, no overflow`, async ({ page }) => {
-		test.skip(setupFailed !== '');
+		test.skip(setupFailed !== '', setupFailed);
 		// Wait for the API response that loads tournament data
 		const responsePromise = page.waitForResponse(
-			(res) => res.url().includes(`/t/${tournamentSlug}`) && res.status() === 200
+			(res) => res.url().includes(`/api/t/${tournamentSlug}`) && res.status() === 200
 		);
 		await page.goto(`/t/${tournamentSlug}`);
 		await responsePromise;
@@ -150,7 +150,7 @@ test.describe('Mobile responsive — 375x667', () => {
 	});
 
 	test(`dashboard — tournament list accessible`, async ({ page }) => {
-		test.skip(setupFailed !== '');
+		test.skip(setupFailed !== '', setupFailed);
 		await page.goto('/dashboard');
 		await page.waitForLoadState('networkidle');
 
@@ -173,7 +173,7 @@ test.describe('Mobile responsive — 375x667', () => {
 	});
 
 	test(`tournament admin page — bracket actions accessible`, async ({ page }) => {
-		test.skip(setupFailed !== '');
+		test.skip(setupFailed !== '', setupFailed);
 		await page.goto(`/tournaments/${tournamentId}`);
 		await page.waitForLoadState('networkidle');
 

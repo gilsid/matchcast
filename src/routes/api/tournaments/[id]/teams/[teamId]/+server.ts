@@ -1,12 +1,12 @@
 import type { RequestHandler } from './$types';
 import { deleteTeam } from '$lib/server/tournament.service';
-import { fail, failure, ok } from '$lib/server/respond';
+import { authCheck, failure, ok } from '$lib/server/respond';
 
-export const DELETE: RequestHandler = async ({ locals, params }) => {
-	const userId = locals.user?.id;
-	if (!userId) return fail('Unauthorized', 'UNAUTHORIZED', 401);
+export const DELETE: RequestHandler = async (event) => {
+	const denied = authCheck(event);
+	if (denied) return denied;
 	try {
-		await deleteTeam(params.id, params.teamId, userId);
+		await deleteTeam(event.params.id, event.params.teamId, event.locals.user!.id);
 		return ok(null);
 	} catch (err) {
 		return failure(err);

@@ -1,12 +1,12 @@
 import type { RequestHandler } from './$types';
 import { startMatch } from '$lib/server/bracket.service';
-import { fail, failure, ok } from '$lib/server/respond';
+import { authCheck, failure, ok } from '$lib/server/respond';
 
-export const PATCH: RequestHandler = async ({ locals, params }) => {
-	const userId = locals.user?.id;
-	if (!userId) return fail('Unauthorized', 'UNAUTHORIZED', 401);
+export const PATCH: RequestHandler = async (event) => {
+	const denied = authCheck(event);
+	if (denied) return denied;
 	try {
-		return ok(await startMatch(params.id, userId));
+		return ok(await startMatch(event.params.id, event.locals.user!.id));
 	} catch (err) {
 		return failure(err);
 	}

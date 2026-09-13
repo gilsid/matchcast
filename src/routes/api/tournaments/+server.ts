@@ -1,22 +1,22 @@
 import type { RequestHandler } from './$types';
 import { createTournament, listTournaments } from '$lib/server/tournament.service';
-import { fail, failure, ok } from '$lib/server/respond';
+import { authCheck, failure, ok, fail } from '$lib/server/respond';
 
-export const GET: RequestHandler = async ({ locals }) => {
-	const userId = locals.user?.id;
-	if (!userId) return fail('Unauthorized', 'UNAUTHORIZED', 401);
+export const GET: RequestHandler = async (event) => {
+	const denied = authCheck(event);
+	if (denied) return denied;
 	try {
-		return ok(await listTournaments(userId));
+		return ok(await listTournaments(event.locals.user!.id));
 	} catch (err) {
 		return failure(err);
 	}
 };
 
-export const POST: RequestHandler = async ({ locals, request }) => {
-	const userId = locals.user?.id;
-	if (!userId) return fail('Unauthorized', 'UNAUTHORIZED', 401);
+export const POST: RequestHandler = async (event) => {
+	const denied = authCheck(event);
+	if (denied) return denied;
 	try {
-		const body = (await request.json()) as {
+		const body = (await event.request.json()) as {
 			name?: string;
 			sport?: string;
 			format?: string;
@@ -29,7 +29,10 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 		if (!sport) {
 			return fail('Olahraga wajib diisi', 'VALIDATION_ERROR', 400);
 		}
-		return ok(await createTournament(userId, { name, sport, format: body.format }), 201);
+		return ok(
+			await createTournament(event.locals.user!.id, { name, sport, format: body.format }),
+			201
+		);
 	} catch (err) {
 		return failure(err);
 	}

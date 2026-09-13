@@ -47,8 +47,12 @@ export async function login(email: string, password: string) {
 		throw new AuthError('Invalid credentials', 'INVALID_CREDENTIALS', 401);
 	}
 
-	const { passwordHash: _passwordHash, ...rest } = user;
-	return rest;
+	return {
+		id: user.id,
+		email: user.email,
+		name: user.name,
+		createdAt: user.createdAt
+	};
 }
 
 export function signToken(userId: string): Promise<string> {

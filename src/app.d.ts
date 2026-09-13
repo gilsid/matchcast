@@ -5,6 +5,7 @@ declare global {
 		// interface Error {}
 		interface Locals {
 			user: { id: string } | null;
+			tokenInvalid: boolean;
 		}
 		// interface PageData {}
 		// interface PageState {}
