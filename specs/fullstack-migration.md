@@ -130,7 +130,13 @@ Envelope dipertahankan: `{ success: true, data }` / `{ success: false, error: { 
 
 ### Fase 3 — Bracket + match + publik
 
-1. Pindah `bracket.service.ts` 1:1 (jangan refactor algoritma + pola atomik).
+1. Pindah `bracket.service.ts` 1:1 (jangan refactor algoritma + pola atomik) dengan SATU
+   perkecualian terdokumentasi: `planBracketMatches` restart `matchOrder` per ronde.
+   Backend lama nomor global (final 4-tim = `(2,3)`), sementara `propagateWinner`
+   mencari slot per-ronde (`ceil(order/2)`), sehingga pemenang tak pernah terisi —
+   test `full-tournament.spec.ts` backend gagal di `main` karenanya. Nomor per-ronde
+   juga cocok dengan tampilan `R{round}·M{order}` di `bracket.svelte`.
+   Regresi dikunci `src/lib/server/__tests__/bracket.service.test.ts` (`planBracketMatches`).
 2. Endpoint 10-12 + 14; halaman `t/[slug]` server load + polling `setTimeout` rekursif.
 3. `export const config = { isr: { expiration: 60 } }` hanya di route publik anonim.
 4. Verify: full alur 4 tim → start → skor → propagasi → final → turnamen `finished`; skor seri/negatif/non-integer ditolak; double-generate sequential = 409; race `start`/`score` = tepat 1 sukses.
