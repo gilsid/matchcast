@@ -1,7 +1,5 @@
 import type { ApiResult } from '$lib/types';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-
 export class AuthError extends Error {
 	constructor(
 		message: string,
@@ -59,10 +57,9 @@ export interface PaginatedMatches {
 }
 
 async function request<T>(path: string, init?: RequestInit, fetchFn = fetch): Promise<T> {
-	const res = await fetchFn(`${API_BASE}${path}`, {
+	const res = await fetchFn(`/api${path}`, {
 		...init,
-		headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
-		credentials: 'include'
+		headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) }
 	});
 	const data = (await res.json()) as ApiResult<T>;
 	if (!data.success) {
