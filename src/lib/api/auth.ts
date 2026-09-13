@@ -5,15 +5,8 @@ interface AuthResponse {
 	user: { id: string; email: string; name: string; createdAt: string };
 }
 
-const DEV_BASE = `http://localhost:${'3001'}`;
-const BASE_URL = import.meta.env.VITE_API_URL || DEV_BASE;
-
-function apiUrl(path: string): string {
-	return `${BASE_URL}${path}`;
-}
-
 export async function apiRegister(email: string, password: string, name: string) {
-	const res = await fetch(apiUrl('/auth/register'), {
+	const res = await fetch('/api/auth/register', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ email, password, name })
@@ -24,11 +17,10 @@ export async function apiRegister(email: string, password: string, name: string)
 }
 
 export async function apiLogin(email: string, password: string) {
-	const res = await fetch(apiUrl('/auth/login'), {
+	const res = await fetch('/api/auth/login', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ email, password }),
-		credentials: 'include'
+		body: JSON.stringify({ email, password })
 	});
 	const data = (await res.json()) as ApiSuccess<AuthResponse> | ApiErrorResponse;
 	if (!data.success) throw new Error(data.error.message);
