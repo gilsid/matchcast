@@ -4,57 +4,54 @@ Platform manajemen turnamen olahraga amatir. Penyelenggara buat bracket, kelola
 skor, peserta/penonton lihat jadwal & skor real-time via link publik — tanpa
 login.
 
+Satu app SvelteKit fullstack (API same-origin di `src/routes/api/*`), deploy
+serverless Vercel + Neon. Riwayat keputusan di `docs/adr/`.
+
 ## Tech Stack
 
-| Lapisan | Stack |
-| --- | --- |
-| Frontend | SvelteKit 2 + TypeScript + Tailwind CSS 4 + shadcn-svelte |
-| Backend | Fastify 5 + TypeScript + Prisma 7 |
-| Database | PostgreSQL (Neon production) |
-| Runtime | Bun |
-| Auth | JWT via `@fastify/jwt`, httpOnly cookie, bcryptjs |
-| Testing | Playwright (API E2E) + Vitest (unit/component) |
-| CI | GitHub Actions — typecheck + unit + Playwright |
-| Font | Inter, Oswald, JetBrains Mono via @fontsource |
-| Ikon | svelte-radix |
+| Lapisan  | Stack                                                               |
+| -------- | ------------------------------------------------------------------- |
+| App      | SvelteKit 2 fullstack + TypeScript + Tailwind CSS 4 + shadcn-svelte |
+| Database | PostgreSQL (Neon HTTP di Vercel, pg Pool lokal) via Prisma 7        |
+| Runtime  | Bun (Node 22 di Vercel)                                             |
+| Auth     | JWT via `jose`, httpOnly cookie, bcryptjs                           |
+| Testing  | Playwright (API + mobile) + Vitest (unit/component)                 |
+| CI       | GitHub Actions — check + unit + build + Playwright                  |
+| Font     | Inter, Oswald, JetBrains Mono via @fontsource                       |
+| Ikon     | svelte-radix                                                        |
 
 ## Struktur Folder
 
 ```text
 matchcast/
 ├── AGENTS.md
+├── CONTEXT.md
 ├── README.md
 ├── specs/
+├── docs/adr/
 ├── .github/workflows/
-├── matchcast-frontend/
-│   ├── src/routes/
-│   ├── src/lib/
+├── prisma/
+├── src/
+│   ├── hooks.server.ts
+│   ├── routes/
 │   │   ├── api/
-│   │   ├── components/ui/
-│   │   │   └── __tests__/
-│   │   └── types/
-│   └── vitest.config.ts
-└── matchcast-backend/
-    ├── src/
-    │   ├── index.ts
-    │   ├── prisma-client.ts
-    │   ├── plugins/
-    │   ├── routes/
-    │   ├── services/
-    │   │   └── __tests__/
-    │   └── generated/prisma/
-    ├── prisma/
-    ├── prisma.config.ts
-    ├── tests/
-    ├── vitest.config.ts
-    └── playwright.config.ts
+│   │   └── dashboard/ login/ register/ t/[slug]/ tournaments/[id]/
+│   └── lib/
+│       ├── server/        # SERVER-ONLY: db, auth, services
+│       ├── api/           # fetch relatif /api/*
+│       ├── types/
+│       └── components/ui/
+├── tests/
+│   ├── api/
+│   └── mobile-responsive.spec.ts
+└── package.json
 ```
 
 ## Cara Menjalankan Lokal
 
 ### Prasyarat
 
-- Bun (package manager)
+- Bun
 - PostgreSQL lokal (atau Docker)
 
 ### 1. Clone & Install
@@ -62,88 +59,54 @@ matchcast/
 ```bash
 git clone <repo-url> matchcast
 cd matchcast
+bun install
 ```
 
-### 2. Setup Environment Variables
+### 2. Environment
 
 ```bash
-# Backend
-cp matchcast-backend/.env.example matchcast-backend/.env
-# Edit DATABASE_URL sesuai koneksi PostgreSQL
-
-# Frontend
-cp matchcast-frontend/.env.example matchcast-frontend/.env
-# Default VITE_API_URL=http://localhost:3001
+cp .env.example .env
+# Isi DATABASE_URL (postgres lokal) dan JWT_SECRET
 ```
 
-### 3. Install Dependencies
+### 3. Database
 
 ```bash
-cd matchcast-backend && bun install && cd ..
-cd matchcast-frontend && bun install && cd ..
-```
-
-### 4. Setup Database
-
-```bash
-cd matchcast-backend
 bunx prisma generate
-bunx prisma migrate dev
-cd ..
+bunx prisma migrate deploy
 ```
 
-### 5. Jalankan Dev Server
-
-Dua terminal:
+### 4. Dev Server
 
 ```bash
-# Terminal 1 — Backend (port 3001)
-cd matchcast-backend && bun run dev
-
-# Terminal 2 — Frontend (port 5173)
-cd matchcast-frontend && bun run dev
+bun run dev
 ```
 
-Buka `http://localhost:5173`.
+Buka `http://localhost:5173`. API ikut same-origin di `/api/*`.
 
 ## Testing
 
-### Backend
-
 ```bash
-cd matchcast-backend
-
-# Unit & integration (Vitest)
+# Unit & component (Vitest, tanpa DB)
 bun run test:unit
 
-# API E2E (Playwright — requires DB + JWT_SECRET)
+# API + mobile (Playwright — butuh DB + JWT_SECRET + migrasi applied)
+export DATABASE_URL="postgresql://user:pass@localhost:5432/db"
+export JWT_SECRET="local-dev-secret"
 bun run test
 
-# All: typecheck + Playwright
-bun run test:ci
-```
-
-### Frontend
-
-```bash
-cd matchcast-frontend
-
-# Component tests (Vitest, standalone)
-bun run test:unit
-
-# Responsive E2E (Playwright — requires build)
-bun run test
+# Typecheck
+bun run check
 ```
 
 ### CI
 
-Setiap push/PR ke `main`:
-
-1. Backend: typecheck → unit test → Playwright (PostgreSQL container)
-2. Frontend: svelte-kit sync → build → unit test
+Setiap push/PR ke `main`: install → generate → migrate → check → unit →
+build → Playwright (Chromium, Postgres service).
 
 ## Deployment
 
-- **DB:** Neon serverless PostgreSQL via `DATABASE_URL`
-- **Migrations:** `bun run build` (generate + migrate deploy)
-- **Production:** `bun run start` di backend
+- **App:** Vercel via `@sveltejs/adapter-vercel` (runtime nodejs22.x)
+- **DB:** Neon serverless PostgreSQL via `DATABASE_URL` (URL `neon.tech`
+  otomatis pakai HTTP driver; URL lain pakai pg Pool)
+- **Env wajib:** `DATABASE_URL`, `JWT_SECRET`

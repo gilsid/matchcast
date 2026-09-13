@@ -8,120 +8,55 @@ tanpa login.
 
 ## 2. Tech Stack
 
-| Lapisan | Stack |
-| --- | --- |
-| Frontend | SvelteKit 2 + TypeScript + Tailwind CSS 4 + shadcn-svelte |
-| Backend | Fastify 5 + TypeScript + Prisma 7 + Neon |
-| Database | PostgreSQL |
-| Runtime | Bun |
-| Auth | JWT via `@fastify/jwt`, httpOnly cookie, bcryptjs |
-| Testing API | Playwright — 6 spec files (5 backend + 1 frontend) |
-| Testing Unit | Vitest — 3 test files |
-| Linting | Prettier + ESLint (frontend) |
-| Format | Prettier (useTabs: true, singleQuote: true) |
-| Font | Inter, Oswald, JetBrains Mono via @fontsource |
-| Ikon | svelte-radix |
-| CI | GitHub Actions — typecheck + vitest + Playwright |
+| Lapisan      | Stack                                                                  |
+| ------------ | ---------------------------------------------------------------------- |
+| App          | SvelteKit 2 fullstack + TypeScript + Tailwind CSS 4 + shadcn-svelte    |
+| Database     | PostgreSQL (Neon HTTP di Vercel, pg Pool lokal) via Prisma 7           |
+| Runtime      | Bun (Node 22 di deploy Vercel)                                         |
+| Auth         | JWT via `jose`, httpOnly cookie, bcryptjs                              |
+| Testing API  | Playwright — `tests/api/*.spec.ts` + `tests/mobile-responsive.spec.ts` |
+| Testing Unit | Vitest — `src/**/*.test.ts`                                            |
+| Linting      | Prettier + ESLint                                                      |
+| Format       | Prettier (useTabs: true, singleQuote: true)                            |
+| Font         | Inter, Oswald, JetBrains Mono via @fontsource                          |
+| Ikon         | svelte-radix                                                           |
+| CI           | GitHub Actions — check + vitest + build + Playwright                   |
 
 ## 3. Struktur Folder
 
 ```text
 matchcast/
 ├── AGENTS.md
+├── CONTEXT.md
 ├── README.md
 ├── specs/
-│   └── improvement-plan.md
+│   ├── improvement-plan.md
+│   └── fullstack-migration.md
+├── docs/adr/
 ├── .github/workflows/
 │   └── test.yml
-├── matchcast-backend/
-│   ├── src/
-│   │   ├── index.ts
-│   │   ├── prisma-client.ts
-│   │   ├── plugins/
-│   │   │   └── auth.ts
-│   │   ├── utils/
-│   │   │   └── route-handler.ts
-│   │   ├── routes/
-│   │   │   ├── auth.routes.ts
-│   │   │   ├── health.routes.ts
-│   │   │   ├── match.routes.ts
-│   │   │   ├── public.routes.ts
-│   │   │   └── tournament.routes.ts
-│   │   ├── services/
-│   │   │   ├── auth.service.ts
-│   │   │   ├── bracket.service.ts
-│   │   │   ├── tournament.service.ts
-│   │   │   └── __tests__/
-│   │   │       └── bracket.service.test.ts
-│   │   └── generated/
-│   │       └── prisma/
-│   ├── prisma/
-│   │   ├── schema.prisma
-│   │   └── migrations/
-│   ├── prisma.config.ts
-│   ├── tests/
-│   │   ├── helpers.ts
-│   │   ├── bracket-generation.spec.ts
-│   │   ├── error-paths.spec.ts
-│   │   ├── full-tournament.spec.ts
-│   │   ├── list-tournaments.spec.ts
-│   │   └── race-condition.spec.ts
-│   ├── vitest.config.ts
-│   ├── playwright.config.ts
-│   └── package.json
-└── matchcast-frontend/
-    ├── prettier.config.js
-    ├── src/
-    │   ├── routes/
-    │   │   ├── +layout.svelte
-    │   │   ├── +page.svelte
-    │   │   ├── +error.svelte
-    │   │   ├── layout.css
-    │   │   ├── dashboard/
-    │   │   │   ├── +page.svelte
-    │   │   │   └── +page.ts
-    │   │   ├── login/
-    │   │   │   └── +page.svelte
-    │   │   ├── register/
-    │   │   │   └── +page.svelte
-    │   │   ├── t/[slug]/
-    │   │   │   ├── +page.svelte
-    │   │   │   └── +page.ts
-    │   │   └── tournaments/[id]/
-    │   │       ├── +page.svelte
-    │   │       └── +page.ts
-    │   └── lib/
-    │       ├── api/
-    │       │   ├── auth.ts
-    │       │   ├── health.ts
-    │       │   └── tournament.ts
-    │       ├── components/ui/
-    │       │   ├── auth-form.svelte
-    │       │   ├── bracket.svelte
-    │       │   ├── button.svelte
-    │       │   ├── card.svelte
-    │       │   ├── card-content.svelte
-    │       │   ├── card-header.svelte
-    │       │   ├── input.svelte
-    │       │   ├── label.svelte
-    │       │   ├── score-modal.svelte
-    │       │   ├── skeleton.svelte
-    │       │   ├── spinner.svelte
-    │       │   └── __tests__/
-    │       │       ├── bracket.test.ts
-    │       │       └── score-modal.test.ts
-    │       ├── types/
-    │       │   └── index.ts
-    │       ├── utils.ts
-    │       ├── index.ts
-    │       ├── assets/
-    │       │   └── favicon.svg
-    │       └── hooks/
-    ├── tests/
-    │   └── mobile-responsive.spec.ts
-    ├── vitest.config.ts
-    ├── playwright.config.ts
-    └── package.json
+├── prisma/
+│   ├── schema.prisma
+│   └── migrations/
+├── prisma.config.ts
+├── svelte.config.js         # adapter-vercel (runtime nodejs22.x)
+├── src/
+│   ├── hooks.server.ts      # verify JWT → locals.user
+│   ├── app.d.ts             # Locals { user, tokenInvalid }
+│   ├── routes/
+│   │   ├── api/             # +server.ts JSON (auth, tournaments, matches, t)
+│   │   ├── dashboard/+page.server.ts
+│   │   ├── tournaments/[id]/+page.server.ts
+│   │   └── t/[slug]/+page.server.ts   # ISR 60s
+│   └── lib/
+│       ├── server/          # SERVER-ONLY: db, auth, services, respond, errors
+│       ├── api/             # fetch relatif /api/*
+│       ├── types/index.ts
+│       └── components/ui/
+├── tests/
+│   ├── api/                 # 5 spec + helpers.ts
+│   └── mobile-responsive.spec.ts
+└── package.json
 ```
 
 ## 4. Skema Database
@@ -140,22 +75,22 @@ Match      id, round, matchOrder, homeTeamId→Team?, awayTeamId→Team?,
 
 ## 5. Endpoint API
 
-| Method | Path | Auth | Deskripsi |
-| --- | --- | --- | --- |
-| GET | `/health` | ❌ | Health check → `{success, data}` |
-| POST | `/auth/register` | ❌ | Daftar (pw max 128, rate 5/m/IP) |
-| POST | `/auth/login` | ❌ | Login (rate 5/m/IP) |
-| POST | `/auth/logout` | ❌ | Logout — clear token cookie |
-| POST | `/tournaments` | ✅ | Buat turnamen |
-| GET | `/tournaments` | ✅ | List turnamen milik user |
-| GET | `/tournaments/:id` | ✅ | Detail + teams + matches |
-| POST | `/tournaments/:id/teams` | ✅ | Tambah tim (draft only) |
-| DELETE | `/tournaments/:id/teams/:teamId` | ✅ | Hapus tim (draft only) |
-| POST | `/tournaments/:id/generate-bracket` | ✅ | Generate bracket |
-| PATCH | `/matches/:id/start` | ✅ | scheduled → ongoing |
-| PATCH | `/matches/:id/score` | ✅ | Update skor (integer only) |
-| GET | `/t/:slug` | ❌ | Detail publik turnamen |
-| GET | `/t/:slug/matches` | ❌ | List match publik (paginated) |
+| Method | Path                                    | Auth | Deskripsi                        |
+| ------ | --------------------------------------- | ---- | -------------------------------- |
+| GET    | `/api/health`                           | ❌   | Health check → `{success, data}` |
+| POST   | `/api/auth/register`                    | ❌   | Daftar (pw 8-128)                |
+| POST   | `/api/auth/login`                       | ❌   | Login, set cookie `token`        |
+| POST   | `/api/auth/logout`                      | ❌   | Logout — clear token cookie      |
+| POST   | `/api/tournaments`                      | ✅   | Buat turnamen                    |
+| GET    | `/api/tournaments`                      | ✅   | List turnamen milik user         |
+| GET    | `/api/tournaments/:id`                  | ✅   | Detail + teams + matches         |
+| POST   | `/api/tournaments/:id/teams`            | ✅   | Tambah tim (draft only)          |
+| DELETE | `/api/tournaments/:id/teams/:teamId`    | ✅   | Hapus tim (draft only)           |
+| POST   | `/api/tournaments/:id/generate-bracket` | ✅   | Generate bracket                 |
+| PATCH  | `/api/matches/:id/start`                | ✅   | scheduled → ongoing              |
+| PATCH  | `/api/matches/:id/score`                | ✅   | Update skor (integer only)       |
+| GET    | `/api/t/:slug`                          | ❌   | Detail publik turnamen           |
+| GET    | `/api/t/:slug/matches`                  | ❌   | List match publik (paginated)    |
 
 ## 6. Token Desain
 
@@ -176,113 +111,110 @@ destructive: #E54B4B
 
 - **Response API:** semua endpoint return
   `{ success, data?, error?: { message, code } }`
-- **Error helper:** `DomainError` di `utils/route-handler.ts` — subclass dgn `message`, `code`, `statusCode`.
-  `wrapHandler(fn)` otomatis catch `DomainError` → response konsisten.
-- **Auth:** JWT via httpOnly cookie `token` atau `Authorization: Bearer`. Cookie
-  otomatis di `credentials: "include"`.
-- **Penamaan file:** routes = `resource.routes.ts`, services =
-  `resource.service.ts`, Svelte components = PascalCase.
-- **Penamaan endpoint:** plural (`/tournaments`, `/matches/:id/score`).
+- **Error helper:** `DomainError` di `lib/server/errors.ts` — subclass dgn `message`, `code`, `statusCode`.
+  `failure(err)` di `lib/server/respond.ts` map `DomainError` → response konsisten;
+  `authCheck(event)` bedakan token hilang (`UNAUTHORIZED`) vs token rusak (`INVALID_TOKEN`).
+- **Auth:** JWT via httpOnly cookie `token` atau `Authorization: Bearer`, verify di
+  `hooks.server.ts` → `locals.user`. Tanpa `JWT_SECRET` di prod → fatal + exit.
+- **Server boundary:** `$lib/server/*` tidak boleh diimport kode klien. Baca milik
+  halaman sendiri via `+page.server.ts` langsung ke service; mutasi browser via
+  `fetch` relatif `/api/*` (same-origin, tanpa `VITE_API_URL`).
+- **Penamaan file:** services = `resource.service.ts`, Svelte components = PascalCase,
+  API = `routes/api/.../+server.ts`.
+- **Penamaan endpoint:** plural (`/api/tournaments`, `/api/matches/:id/score`).
 - **Error domain:** `TournamentError`, `BracketError`, `AuthError` — masing2
-  punya `message`, `code`, `statusCode`. Route handler catch specific →
-  reply konsisten. Error tak terduga → global `setErrorHandler` log, reply
-  generic.
-- **Skor:** integer non-negatif, validasi di `match.routes.ts` via `Number.isInteger`.
-- **Format code:** Prettier config di `matchcast-frontend/prettier.config.js`:
-  `useTabs: true`, `singleQuote: true`, `trailingComma: "none"`, `printWidth: 100`.
-  Frontend: `bun run format` (prettier --write). Backend: manual.
+  punya `message`, `code`, `statusCode`.
+- **Skor:** integer non-negatif, validasi di `+server.ts` via `Number.isInteger`.
+- **Komentar:** hanya bila perlu (kenapa non-obvious, trade-off YAGNI, peringatan bahaya).
+  Maks 1-2 baris, Inggris di kode.
+- **YAGNI:** tanpa rate-limit persisten, tanpa tRPC/OpenAPI/Zod, tanpa websocket.
+  Lihat `specs/fullstack-migration.md` §1 untuk daftar no.
+- **Format code:** Prettier: `useTabs: true`, `singleQuote: true`,
+  `trailingComma: "none"`, `printWidth: 100`. `bun run format`.
 
 ## 8. Command Penting
 
-### Backend (matchcast-backend/)
-
 ```bash
-bun run src/index.ts      # dev server (port 3001)
-bun run start             # production
-bun run build             # prisma generate + migrate deploy
-bun run typecheck         # TypeScript check
-bun run test:unit         # Vitest
-bun run test              # Playwright API
-bun run test:ci           # typecheck + Playwright
-bunx prisma migrate dev   # migrasi schema
+bun run dev               # dev server (port 5173, API same-origin /api/*)
+bun run build             # production build (adapter-vercel)
+bun run preview           # preview build lokal
+bun run check             # svelte-check (typecheck)
+bun run test:unit         # Vitest (src/**/*.test.ts)
+bun run test              # build + Playwright (butuh DATABASE_URL + JWT_SECRET)
+bun run lint              # prettier --check + eslint
+bun run format            # prettier --write
+bunx prisma generate      # generate client ke src/lib/generated/prisma
+bunx prisma migrate dev   # migrasi schema (dev)
+bunx prisma migrate deploy # migrasi schema (prod/CI)
 bunx prisma studio        # GUI database
 ```
 
-### Frontend (matchcast-frontend/)
+Test API butuh Postgres jalan + migrasi applied:
 
 ```bash
-bun run dev               # dev server (port 5173)
-bun run build             # production build
-bun run test:unit         # Vitest component
-bun run test              # build + Playwright
-bun run check             # svelte-check
-```
-
-### Testing
-
-```bash
-# Backend — all
-cd matchcast-backend && bun run typecheck && bun run test:unit && bun run test
-
-# Frontend — unit only (no DB)
-cd matchcast-frontend && bun run test:unit
+export DATABASE_URL="postgresql://user:pass@localhost:5432/db"
+export JWT_SECRET="local-dev-secret"
+bunx prisma migrate deploy
+bun run test
 ```
 
 ## 9. Aturan Kerja
 
 1. **Skema Prisma:** jangan ubah tanpa konfirmasi.
 2. **Dependency:** jangan tambah baru tanpa alasan. Gunakan existing dulu.
-3. **Testing:** Playwright (`tests/*.spec.ts`) untuk API logic; Vitest
+3. **Testing:** Playwright (`tests/api/*.spec.ts`) untuk API logic; Vitest
    (`src/**/*.test.ts`) untuk unit/component.
 4. **Ambiguitas:** tanya dulu.
 5. **Git:** staging hanya file yg sengaja diubah. Delete branch remote setelah
    merge.
 6. **Scope:** jangan implementasi di luar permintaan.
-7. **Keamanan:** tanpa `JWT_SECRET` → fatal + exit. Input di-trim & divalidasi
-   (email regex, max length, skor integer). Rate limit auth 5/m/IP.
+7. **Keamanan:** tanpa `JWT_SECRET` di prod → fatal + exit. Input di-trim &
+   divalidasi (email regex, max length, skor integer). Tanpa rate-limit
+   persisten (YAGNI, lihat ADR-0001).
 
 ## 10. Prisma Atomic Patterns
 
 - **updateMany with where guard:** `updateMany({ where: { id, status: "X" },
-  data: { status: "Y" } })` — race-safe.
+data: { status: "Y" } })` — race-safe.
 - **$transaction for multi-step:** score + propagateWinner + finish check in
   one `$transaction`; pass`tx: Prisma.TransactionClient`.
 - **TransactionClient type:**
   `import type { Prisma } from "../generated/prisma/client"`.
-- **Neon migrations:** `DATABASE_URL_UNPOOLED` di `prisma.config.ts` (bukan di
-  `schema.prisma` — Prisma 7).
+- **Neon driver:** URL mengandung `neon.tech` → `PrismaNeonHttp`; selain itu
+  `PrismaPg` Pool (lokal). Lihat `lib/server/db.ts`.
 - **Match state machine:** `scheduled → ongoing → finished`. Score gate on
   `"ongoing"`, not `{ not: "finished" }`.
+- **Nomor match per ronde:** `matchOrder` restart tiap ronde (final 4-tim =
+  `(2,1)`). `propagateWinner` cari slot via `ceil(order/2)`.
 - **Cookie extraction:** `res.headersArray().filter(h => h.name ===
-  "set-cookie")`.
+"set-cookie")`.
 - **Race test:** `Promise.allSettled` → filter status → assert success === 1.
+- **Test cleanup:** hapus `Tournament` dulu (FK owner RESTRICT), baru `User`.
 
 ## 11. CI Pipeline
 
 ```yaml
-backend-test:
+test: # single job
   postgres:16 service
   bun install
   prisma generate
   migrate deploy
-  typecheck
+  check (svelte-check)
   test:unit (Vitest)
-  test (Playwright API)
-
-frontend-test:
-  bun install
-  svelte-kit sync
-  build
-  test:unit (Vitest)
+  build (adapter-vercel)
+  playwright install chromium
+  test (Playwright: tests/api + mobile)
 ```
 
 <!-- BEGIN:workflow -->
+
 ## Git workflow (Wajib!)
 
 - **GitHub Flow:** `main` = production. Setiap kerja bikin branch baru.
 - Saat user bilang "kerjain X": `git checkout main && git pull &&
-  git checkout -b <tipe>/<nama>` otomatis.
+git checkout -b <tipe>/<nama>` otomatis.
   - Tipe: `feat/`, `fix/`, `refactor/`, `docs/`, `chore/`, `style/`
 - Selesai → push + PR ke `main`. Merge sendiri. Delete branch.
 - Body PR pake `-F` atau `--body-file`, jangan `\n` literal.
+
 <!-- END:workflow -->
