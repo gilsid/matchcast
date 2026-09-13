@@ -6,41 +6,41 @@
 > `specs/fullstack-migration.md`. Tabel di bawah hasil verifikasi kode saat migrasi
 > direncanakan; status `CEK` = verifikasi ulang di fase tercantum.
 >
-> | ID | Status | Keterangan |
-> | --- | --- | --- |
-> | P1.1 | DONE | Guard draft ada (`tournament.service.ts:111`) |
-> | P1.2 | DONE | Max 128 ada (`auth.routes.ts:31`) |
-> | P1.3 | OPEN→PORT | Tulis ulang ke `tests/api/*` (Fase 3-4) |
-> | P1.4 | DONE→SIMPLIFY | CI ada; sederhanakan 1 job (Fase 4) |
-> | P1.5 | SEBAGIAN | `role/aria-modal` ada (`score-modal.svelte:85-86`); sisa focus trap + `svelte:window` (Fase 3) |
-> | P1.6 | DONE | `onMount(checkHealth)` (`+page.svelte:25`) |
-> | P1.7 | DONE | `+error.svelte` ada |
-> | P2.1 | REMAP | Duplikat validasi skor masih ada; rapikan saat port (Fase 3) |
-> | P2.2 | DONE | `endsWith` fix (`public.routes.ts:14-16`) |
-> | P2.3 | DONE→PORT | `wrapHandler` ada; jadi `respond.ts` (Fase 1) |
-> | P2.4 | DONE | `tournamentInclude` terekstrak (`tournament.service.ts:62`) |
-> | P2.5 | DONE | Seed dipersist (`bracket.service.ts:200-205`) |
-> | P2.6 | DONE→PORT | Paginasi ada; port clamp 1-100/50 (Fase 3) |
-> | P2.7 | DONE | Validasi email login ada (`auth.routes.ts:43`) |
-> | P2.8 | DONE | Hex hardcode hilang dari `src` |
-> | P2.9 | DONE | Import tunggal dari `$lib/types` |
-> | P2.10 | OPEN | Dashboard masih `<button>` (`+page.svelte:46,88`) (Fase 3) |
-> | P2.11 | DONE | `setTimeout` rekursif (`t/[slug]/+page.svelte:32,37`) |
-> | P2.12 | DONE | `deleteMany` atomik (`tournament.service.ts:143`) |
-> | P2.13 | SEBAGIAN | `+page.ts` ada; naikkan ke `+page.server.ts` (Fase 2-3) |
-> | P2.14 | DONE | `typecheck` ada |
-> | P2.15 | SEBAGIAN | `cleanupUser` helper ada (`tests/helpers.ts:59`); wiring `afterAll` CEK (Fase 4) |
-> | P2.16 | CEK | (Fase 4) |
-> | P2.17 | CEK | `utils.ts` masih ada (Fase 4) |
-> | P3.1 | DONE→CEK | `bracket.test.ts` + `score-modal.test.ts` ada; kualitas CEK (Fase 4) |
-> | P3.2 | DONE | `bracket.service.test.ts` ada |
-> | P3.3 | OPEN→PORT | Port ke `tests/api/*` (Fase 4) |
-> | P3.4 | OBSOLETE | Hilang bersama `index.ts` (Fase 1) |
-> | P3.5 | OBSOLETE | Hilang bersama `plugins/auth.ts` (Fase 1) |
-> | P3.6 | CEK | (Fase 4) |
-> | P3.7 | CEK | (Fase 4) |
-> | P3.8 | CEK | (Fase 3) |
-> | P3.9 | DONE | Health terbungkus (`health.routes.ts:5`) |
+> | ID    | Status        | Keterangan                                                                                     |
+> | ----- | ------------- | ---------------------------------------------------------------------------------------------- |
+> | P1.1  | DONE          | Guard draft ada (`tournament.service.ts:111`)                                                  |
+> | P1.2  | DONE          | Max 128 ada (`auth.routes.ts:31`)                                                              |
+> | P1.3  | OPEN→PORT     | Tulis ulang ke `tests/api/*` (Fase 3-4)                                                        |
+> | P1.4  | DONE→SIMPLIFY | CI ada; sederhanakan 1 job (Fase 4)                                                            |
+> | P1.5  | SEBAGIAN      | `role/aria-modal` ada (`score-modal.svelte:85-86`); sisa focus trap + `svelte:window` (Fase 3) |
+> | P1.6  | DONE          | `onMount(checkHealth)` (`+page.svelte:25`)                                                     |
+> | P1.7  | DONE          | `+error.svelte` ada                                                                            |
+> | P2.1  | REMAP         | Duplikat validasi skor masih ada; rapikan saat port (Fase 3)                                   |
+> | P2.2  | DONE          | `endsWith` fix (`public.routes.ts:14-16`)                                                      |
+> | P2.3  | DONE→PORT     | `wrapHandler` ada; jadi `respond.ts` (Fase 1)                                                  |
+> | P2.4  | DONE          | `tournamentInclude` terekstrak (`tournament.service.ts:62`)                                    |
+> | P2.5  | DONE          | Seed dipersist (`bracket.service.ts:200-205`)                                                  |
+> | P2.6  | DONE→PORT     | Paginasi ada; port clamp 1-100/50 (Fase 3)                                                     |
+> | P2.7  | DONE          | Validasi email login ada (`auth.routes.ts:43`)                                                 |
+> | P2.8  | DONE          | Hex hardcode hilang dari `src`                                                                 |
+> | P2.9  | DONE          | Import tunggal dari `$lib/types`                                                               |
+> | P2.10 | OPEN          | Dashboard masih `<button>` (`+page.svelte:46,88`) (Fase 3)                                     |
+> | P2.11 | DONE          | `setTimeout` rekursif (`t/[slug]/+page.svelte:32,37`)                                          |
+> | P2.12 | DONE          | `deleteMany` atomik (`tournament.service.ts:143`)                                              |
+> | P2.13 | SEBAGIAN      | `+page.ts` ada; naikkan ke `+page.server.ts` (Fase 2-3)                                        |
+> | P2.14 | DONE          | `typecheck` ada                                                                                |
+> | P2.15 | SEBAGIAN      | `cleanupUser` helper ada (`tests/helpers.ts:59`); wiring `afterAll` CEK (Fase 4)               |
+> | P2.16 | CEK           | (Fase 4)                                                                                       |
+> | P2.17 | CEK           | `utils.ts` masih ada (Fase 4)                                                                  |
+> | P3.1  | DONE→CEK      | `bracket.test.ts` + `score-modal.test.ts` ada; kualitas CEK (Fase 4)                           |
+> | P3.2  | DONE          | `bracket.service.test.ts` ada                                                                  |
+> | P3.3  | OPEN→PORT     | Port ke `tests/api/*` (Fase 4)                                                                 |
+> | P3.4  | OBSOLETE      | Hilang bersama `index.ts` (Fase 1)                                                             |
+> | P3.5  | OBSOLETE      | Hilang bersama `plugins/auth.ts` (Fase 1)                                                      |
+> | P3.6  | CEK           | (Fase 4)                                                                                       |
+> | P3.7  | CEK           | (Fase 4)                                                                                       |
+> | P3.8  | CEK           | (Fase 3)                                                                                       |
+> | P3.9  | DONE          | Health terbungkus (`health.routes.ts:5`)                                                       |
 
 Review date: 2026-05-02
 Reviewers: 3 subagents (backend, frontend, testing/CI)
@@ -65,10 +65,12 @@ Source files: all `.ts`, `.svelte`, `.prisma`, test specs, package.json
 ### 🔴 P1.3 Customer-facing error paths untested
 
 **Files:**
+
 - `matchcast-backend/tests/*.spec.ts`
 - `test coverage gap analysis`
 
 **Missing tests (hardest to find via manual QA):**
+
 1. `DELETE /tournaments/:id/teams/:teamId` — 0 coverage
 2. `PATCH /matches/:id/start` error paths — non-existent match, finished match, null team slots, other user's match
 3. `PATCH /matches/:id/score` error paths — tied score, negative, non-integer, non-existent, unauthorized
@@ -85,6 +87,7 @@ Source files: all `.ts`, `.svelte`, `.prisma`, test specs, package.json
 **Files:** root `/`, both `package.json`
 **Problem:** Zero `.github/` or other CI config. Tests run only manually. Backend missing `typecheck` + `lint` scripts entirely.
 **Fix:**
+
 - `.github/workflows/test.yml` — install → prisma generate → migrate → test (backend + frontend)
 - Backend `package.json` add: `"typecheck": "tsc --noEmit"`, `"lint": "prettier --check src/ tests/"`
 - Pre-commit hooks (optional but recommended)
@@ -93,6 +96,7 @@ Source files: all `.ts`, `.svelte`, `.prisma`, test specs, package.json
 
 **File:** `matchcast-frontend/src/lib/components/ui/score-modal.svelte:56`
 **Problems:**
+
 1. Escape key handler on overlay div — doesn't fire when `<input>` is focused (event doesn't bubble from input)
 2. No `aria-modal="true"` / `aria-labelledby`
 3. No focus trap — Tab moves behind modal
@@ -280,11 +284,11 @@ Source files: all `.ts`, `.svelte`, `.prisma`, test specs, package.json
 
 ## Summary
 
-| Phase | Count | Category |
-|-------|-------|----------|
-| 🔴 Phase 1: Critical | 7 | Production safety gates |
-| 🟠 Phase 2: Important | 17 | Quality, maintainability, test coverage |
-| 🟡 Phase 3: Nice to have | 9 | Tech debt, minor improvements |
+| Phase                    | Count | Category                                |
+| ------------------------ | ----- | --------------------------------------- |
+| 🔴 Phase 1: Critical     | 7     | Production safety gates                 |
+| 🟠 Phase 2: Important    | 17    | Quality, maintainability, test coverage |
+| 🟡 Phase 3: Nice to have | 9     | Tech debt, minor improvements           |
 
 **Total: 33 improvements**
 

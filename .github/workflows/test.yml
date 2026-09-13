@@ -7,19 +7,16 @@ on:
     branches: [main]
 
 jobs:
-  backend-test:
+  test:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     permissions:
       contents: read
 
     env:
-      DATABASE_URL: "postgresql://test:test@localhost:5432/test"
-      DATABASE_URL_UNPOOLED: "postgresql://test:test@localhost:5432/test"
+      DATABASE_URL: 'postgresql://test:test@localhost:5432/test'
       JWT_SECRET: ci-test-secret-not-for-production
       NODE_ENV: test
-      AUTH_RATE_LIMIT: "100"
-      CORS_ORIGIN: "http://localhost:5173"
 
     services:
       postgres:
@@ -36,10 +33,6 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
-    defaults:
-      run:
-        working-directory: matchcast-backend
-
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
@@ -53,37 +46,12 @@ jobs:
 
       - run: bunx prisma migrate deploy
 
-      - run: bun run typecheck
-
-      - run: bun run test:unit
-
-      - run: bun run test
-
-  frontend-test:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-
-    defaults:
-      run:
-        working-directory: matchcast-frontend
-
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-        with:
-          bun-version: latest
-
-      - run: bun install
-
-      - run: bunx svelte-kit sync
-
-      - run: bun run build
-
       - run: bun run check
 
       - run: bun run test:unit
-        env:
-          VITE_API_URL: http://localhost:3001
+
+      - run: bun run build
+
+      - run: bunx playwright install --with-deps chromium
+
+      - run: bun run test

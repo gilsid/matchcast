@@ -118,14 +118,7 @@ export function planBracketMatches(
 	// addresses next-round slots by per-round order (ceil(order / 2)).
 	let prevRoundMatches = round1Matches + byes;
 	for (let r = 2; r <= totalRounds; r++) {
-		const result = generateRoundMatches(
-			r,
-			seeds,
-			byes,
-			round1Matches,
-			prevRoundMatches,
-			1
-		);
+		const result = generateRoundMatches(r, seeds, byes, round1Matches, prevRoundMatches, 1);
 		matches.push(...result.matches);
 		prevRoundMatches = prevRoundMatches / 2;
 	}
