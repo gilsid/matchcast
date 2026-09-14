@@ -1,5 +1,6 @@
 <script lang="ts">
-	import type { Match } from '$lib/api/tournament';
+	import type { Match } from '$lib/types';
+	import { groupByRound, maxRound } from '$lib/bracket';
 
 	let {
 		matches,
@@ -15,17 +16,8 @@
 		clazz?: string;
 	} = $props();
 
-	function groupByRound(matches: Match[]) {
-		const rounds = new Map<number, Match[]>();
-		for (const m of matches) {
-			if (!rounds.has(m.round)) rounds.set(m.round, []);
-			rounds.get(m.round)!.push(m);
-		}
-		return Array.from(rounds.entries()).sort((a, b) => a[0] - b[0]);
-	}
-
 	const roundGroups = $derived(groupByRound(matches));
-	const maxRounds = $derived(roundGroups.length);
+	const lastRound = $derived(maxRound(roundGroups));
 </script>
 
 <div class="bracket-grid {clazz}">
@@ -123,7 +115,7 @@
 						</div>
 
 						<!-- connector to next round -->
-						{#if round < maxRounds}
+						{#if round < lastRound}
 							<div class="bracket-line-bottom" class:active={match.winnerTeamId !== null}></div>
 						{/if}
 					</div>

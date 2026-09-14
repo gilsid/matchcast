@@ -2,7 +2,7 @@
 	import { onDestroy } from 'svelte';
 	import { page } from '$app/state';
 	import { getPublicTournament } from '$lib/api/tournament';
-	import type { Tournament } from '$lib/api/tournament';
+	import type { Tournament } from '$lib/types';
 	import Bracket from '$lib/components/ui/bracket.svelte';
 
 	let {

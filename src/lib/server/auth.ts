@@ -23,21 +23,52 @@ function getSecret(): Uint8Array {
 	return new TextEncoder().encode(secret);
 }
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export async function register(email: string, password: string, name: string) {
-	const existing = await prisma.user.findUnique({ where: { email } });
+	const cleanEmail = email?.trim() ?? '';
+	const cleanName = name?.trim() ?? '';
+	if (!cleanEmail || !password || !cleanName) {
+		throw new AuthError('Email, password, dan nama wajib diisi', 'VALIDATION_ERROR', 400);
+	}
+	if (!EMAIL_RE.test(cleanEmail)) {
+		throw new AuthError('Format email tidak valid', 'VALIDATION_ERROR', 400);
+	}
+	if (cleanEmail.length > 254 || cleanName.length > 100) {
+		throw new AuthError('Email atau nama terlalu panjang', 'VALIDATION_ERROR', 400);
+	}
+	if (password.length < 8) {
+		throw new AuthError('Password minimal 8 karakter', 'VALIDATION_ERROR', 400);
+	}
+	if (password.length > 128) {
+		throw new AuthError('Password maksimal 128 karakter', 'VALIDATION_ERROR', 400);
+	}
+
+	const existing = await prisma.user.findUnique({ where: { email: cleanEmail } });
 	if (existing) {
 		throw new AuthError('Email already registered', 'EMAIL_EXISTS', 409);
 	}
 
 	const passwordHash = await hash(password, SALT_ROUNDS);
 	return prisma.user.create({
-		data: { email, passwordHash, name },
+		data: { email: cleanEmail, passwordHash, name: cleanName },
 		select: { id: true, email: true, name: true, createdAt: true }
 	});
 }
 
 export async function login(email: string, password: string) {
-	const user = await prisma.user.findUnique({ where: { email } });
+	const cleanEmail = email?.trim() ?? '';
+	if (!cleanEmail || !password) {
+		throw new AuthError('Email dan password wajib diisi', 'VALIDATION_ERROR', 400);
+	}
+	if (!EMAIL_RE.test(cleanEmail)) {
+		throw new AuthError('Format email tidak valid', 'VALIDATION_ERROR', 400);
+	}
+	if (password.length > 128) {
+		throw new AuthError('Password maksimal 128 karakter', 'VALIDATION_ERROR', 400);
+	}
+
+	const user = await prisma.user.findUnique({ where: { email: cleanEmail } });
 	if (!user) {
 		throw new AuthError('Invalid credentials', 'INVALID_CREDENTIALS', 401);
 	}

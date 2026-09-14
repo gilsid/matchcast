@@ -1,6 +1,6 @@
 <script lang="ts">
   import { tick } from "svelte";
-  import type { Match } from "$lib/api/tournament";
+  import type { Match } from "$lib/types";
 
   let {
     match,
@@ -32,14 +32,7 @@
       validationError = "Skor tidak boleh kosong";
       return;
     }
-    if (h < 0 || a < 0) {
-      validationError = "Skor tidak boleh negatif";
-      return;
-    }
-    if (h === a) {
-      validationError = "Skor tidak boleh seri (knockout)";
-      return;
-    }
+    // Domain checks (integer, range, no tie) live in updateMatchScore.
 
     onsubmit(h, a);
   }

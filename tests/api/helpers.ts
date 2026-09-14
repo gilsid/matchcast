@@ -1,32 +1,25 @@
 import type { APIRequestContext } from '@playwright/test';
 import { prisma } from '../../src/lib/server/db';
+import type { Match, Team, Tournament } from '../../src/lib/types';
 
-export interface TeamData {
-	id: string;
-	name: string;
-}
-
-export interface TournamentData {
-	id: string;
-	slug: string;
-	name: string;
-	status: string;
+export type TeamData = Pick<Team, 'id' | 'name'>;
+export type TournamentData = Pick<Tournament, 'id' | 'slug' | 'name' | 'status'> & {
 	teams: TeamData[];
 	matches?: MatchData[];
-}
-
-export interface MatchData {
-	id: string;
-	round: number;
-	matchOrder: number;
-	homeTeamId: string | null;
-	awayTeamId: string | null;
-	homeScore: number | null;
-	awayScore: number | null;
-	status: string;
-	homeTeam?: { id: string; name: string } | null;
-	awayTeam?: { id: string; name: string } | null;
-}
+};
+export type MatchData = Pick<
+	Match,
+	| 'id'
+	| 'round'
+	| 'matchOrder'
+	| 'homeTeamId'
+	| 'awayTeamId'
+	| 'homeScore'
+	| 'awayScore'
+	| 'status'
+	| 'homeTeam'
+	| 'awayTeam'
+>;
 
 // Unique per run to avoid collisions
 const RUN_ID = Date.now().toString(36);

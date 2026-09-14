@@ -1,28 +1,27 @@
-import type { ApiSuccess, ApiErrorResponse } from '$lib/types';
+import { request } from './request';
 
-interface AuthResponse {
+export interface AuthUser {
+	id: string;
+	email: string;
+	name: string;
+	createdAt: string;
+}
+
+export interface AuthSession {
 	token: string;
-	user: { id: string; email: string; name: string; createdAt: string };
+	user: AuthUser;
 }
 
 export async function apiRegister(email: string, password: string, name: string) {
-	const res = await fetch('/api/auth/register', {
+	return await request<AuthUser>('/auth/register', {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ email, password, name })
 	});
-	const data = (await res.json()) as ApiSuccess<AuthResponse['user']> | ApiErrorResponse;
-	if (!data.success) throw new Error(data.error.message);
-	return data.data;
 }
 
 export async function apiLogin(email: string, password: string) {
-	const res = await fetch('/api/auth/login', {
+	return await request<AuthSession>('/auth/login', {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ email, password })
 	});
-	const data = (await res.json()) as ApiSuccess<AuthResponse> | ApiErrorResponse;
-	if (!data.success) throw new Error(data.error.message);
-	return data.data;
 }
