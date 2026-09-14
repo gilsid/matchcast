@@ -50,7 +50,8 @@ matchcast/
 │   │   └── t/[slug]/+page.server.ts   # ISR 60s
 │   └── lib/
 │       ├── server/          # SERVER-ONLY: db, auth, services, respond, errors
-│       ├── api/             # fetch relatif /api/*
+│       ├── api/             # request.ts helper + fetch relatif /api/*
+│       ├── bracket.ts       # groupByRound/maxRound (satu-satunya pemilik grouping)
 │       ├── types/index.ts
 │       └── components/ui/
 ├── tests/
@@ -125,8 +126,19 @@ destructive: #E54B4B
 - **Error domain:** `TournamentError`, `BracketError`, `AuthError` — masing2
   punya `message`, `code`, `statusCode`.
 - **Skor:** integer non-negatif, validasi di `+server.ts` via `Number.isInteger`.
+- **Navigasi:** semua `href` internal dan `goto()` wajib lewat `resolve()` dari
+  `$app/paths` (aturan `svelte/no-navigation-without-resolve`). Bentuk route-id:
+  `resolve('/tournaments/[id]', { id })`, path biasa: `resolve('/login')`.
+- **Error page:** `+error.svelte` kit hanya terima prop `error`; status baca dari
+  `page.status` (`$app/state`). `{#each}` selalu ber-key, misal `(t.id)`.
+- **svelte-ignore:** `svelte/no-unused-svelte-ignore` off di `eslint.config.js`
+  karena eslint-plugin-svelte 3.20 tidak kenal kode a11y svelte 5.56; sumber
+  kebenaran a11y adalah `svelte-check`, bukan rule itu.
 - **Komentar:** hanya bila perlu (kenapa non-obvious, trade-off YAGNI, peringatan bahaya).
   Maks 1-2 baris, Inggris di kode.
+- **SSR seed:** `t/[slug]/+page.svelte` sengaja `$state(data.tournament)` + poll
+  12 detik (`svelte-ignore state_referenced_locally`, intentional). Halaman admin
+  pakai pola `refreshed ?? data` + `$derived`, bukan copy props.
 - **YAGNI:** tanpa rate-limit persisten, tanpa tRPC/OpenAPI/Zod, tanpa websocket.
   Lihat `specs/fullstack-migration.md` §1 untuk daftar no.
 - **Format code:** Prettier: `useTabs: true`, `singleQuote: true`,
