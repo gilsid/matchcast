@@ -23,7 +23,7 @@
 			tournament = await getPublicTournament(page.params.slug!);
 			pollError = '';
 			pollFailCount = 0;
-		} catch (e) {
+		} catch {
 			pollFailCount++;
 			if (pollFailCount >= 3) {
 				pollError = 'Koneksi terputus — coba muat ulang halaman';
@@ -83,7 +83,7 @@
 				Tim ({tournament.teams.length})
 			</summary>
 			<div class="mt-2 flex flex-wrap gap-2">
-				{#each tournament.teams as team}
+				{#each tournament.teams as team (team.id)}
 					<span
 						class="bg-bg-surface clipped-sm border-border-subtle text-text-primary px-3 py-1 text-sm uppercase tracking-wide"
 						style="border-color: var(--color-border-subtle); border-width: 1px; border-style: solid;"

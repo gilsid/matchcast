@@ -34,8 +34,9 @@ export default defineConfig(
 		}
 	},
 	{
-		// Override or add rule settings here, such as:
-		// 'svelte/button-has-type': 'error'
-		rules: {}
+		// plugin predates svelte 5.56 a11y codes, so its unused-ignore
+		// check flags ignores that svelte-check still needs. Off here,
+		// real a11y coverage comes from svelte-check, not this rule.
+		rules: { 'svelte/no-unused-svelte-ignore': 'off' }
 	}
 );
