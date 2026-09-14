@@ -1,165 +1,87 @@
-import type { ApiResult } from '$lib/types';
+import { request } from './request';
+import type { Match, PaginatedMatches, Team, Tournament } from '$lib/types';
 
-export class AuthError extends Error {
-	constructor(
-		message: string,
-		public code: string
-	) {
-		super(message);
-	}
-}
-
-export interface Team {
-	id: string;
-	name: string;
-	seed: number | null;
-}
-
-export interface Tournament {
-	id: string;
-	slug: string;
-	name: string;
-	sport: string;
-	format: string;
-	status: string;
-	ownerId: string;
-	createdAt: string;
-	updatedAt: string;
-	teams?: Team[];
-	_count?: { teams: number };
-	matches?: Match[];
-}
-
-export interface Match {
-	id: string;
-	tournamentId: string;
-	round: number;
-	matchOrder: number;
-	homeTeamId: string | null;
-	awayTeamId: string | null;
-	homeScore: number | null;
-	awayScore: number | null;
-	winnerTeamId: string | null;
-	status: string;
-	homeTeam?: { id: string; name: string } | null;
-	awayTeam?: { id: string; name: string } | null;
-	winnerTeam?: { id: string; name: string } | null;
-}
-
-export interface PaginatedMatches {
-	matches: Match[];
-	pagination: {
-		page: number;
-		limit: number;
-		total: number;
-		totalPages: number;
-	};
-}
-
-async function request<T>(path: string, init?: RequestInit, fetchFn = fetch): Promise<T> {
-	const res = await fetchFn(`/api${path}`, {
-		...init,
-		headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) }
-	});
-	const data = (await res.json()) as ApiResult<T>;
-	if (!data.success) {
-		const msg = data.error?.message || 'Request failed';
-		const code = data.error?.code || 'UNKNOWN';
-		if (code === 'UNAUTHORIZED' || code === 'INVALID_TOKEN') {
-			throw new AuthError(msg, code);
-		}
-		throw new Error(msg);
-	}
-	return data.data;
-}
-
-export function createTournament(
+export async function createTournament(
 	input: { name: string; sport: string; format?: string },
 	fetchFn = fetch
-) {
-	return request<Tournament>(
+): Promise<Tournament> {
+	return await request<Tournament>(
 		'/tournaments',
-		{
-			method: 'POST',
-			body: JSON.stringify(input)
-		},
+		{ method: 'POST', body: JSON.stringify(input) },
 		fetchFn
 	);
 }
 
-export function listTournaments(fetchFn = fetch) {
-	return request<Tournament[]>('/tournaments', undefined, fetchFn);
+export async function listTournaments(fetchFn = fetch): Promise<Tournament[]> {
+	return await request<Tournament[]>('/tournaments', undefined, fetchFn);
 }
 
-export function getTournament(id: string, fetchFn = fetch) {
-	return request<Tournament>(`/tournaments/${id}`, undefined, fetchFn);
+export async function getTournament(id: string, fetchFn = fetch): Promise<Tournament> {
+	return await request<Tournament>(`/tournaments/${id}`, undefined, fetchFn);
 }
 
-export function addTeam(tournamentId: string, name: string, fetchFn = fetch) {
-	return request<Team>(
+export async function addTeam(tournamentId: string, name: string, fetchFn = fetch): Promise<Team> {
+	return await request<Team>(
 		`/tournaments/${tournamentId}/teams`,
-		{
-			method: 'POST',
-			body: JSON.stringify({ name })
-		},
+		{ method: 'POST', body: JSON.stringify({ name }) },
 		fetchFn
 	);
 }
 
-export function deleteTeam(tournamentId: string, teamId: string, fetchFn = fetch) {
-	return request<null>(
+export async function deleteTeam(
+	tournamentId: string,
+	teamId: string,
+	fetchFn = fetch
+): Promise<null> {
+	return await request<null>(
 		`/tournaments/${tournamentId}/teams/${teamId}`,
-		{
-			method: 'DELETE'
-		},
+		{ method: 'DELETE' },
 		fetchFn
 	);
 }
 
-export function generateBracket(tournamentId: string, fetchFn = fetch) {
-	return request<Match[]>(
+export async function generateBracket(tournamentId: string, fetchFn = fetch): Promise<Match[]> {
+	return await request<Match[]>(
 		`/tournaments/${tournamentId}/generate-bracket`,
-		{
-			method: 'POST'
-		},
+		{ method: 'POST' },
 		fetchFn
 	);
 }
 
-export function startMatch(matchId: string, fetchFn = fetch) {
-	return request<Match>(
-		`/matches/${matchId}/start`,
-		{
-			method: 'PATCH'
-		},
-		fetchFn
-	);
+export async function startMatch(matchId: string, fetchFn = fetch): Promise<Match> {
+	return await request<Match>(`/matches/${matchId}/start`, { method: 'PATCH' }, fetchFn);
 }
 
-export function updateMatchScore(
+export async function updateMatchScore(
 	matchId: string,
 	homeScore: number,
 	awayScore: number,
 	fetchFn = fetch
-) {
-	return request<Match>(
+): Promise<Match> {
+	return await request<Match>(
 		`/matches/${matchId}/score`,
-		{
-			method: 'PATCH',
-			body: JSON.stringify({ homeScore, awayScore })
-		},
+		{ method: 'PATCH', body: JSON.stringify({ homeScore, awayScore }) },
 		fetchFn
 	);
 }
 
-export function getPublicTournament(slug: string, fetchFn = fetch) {
-	return request<Tournament>(`/t/${slug}`, undefined, fetchFn);
+export async function getPublicTournament(slug: string, fetchFn = fetch): Promise<Tournament> {
+	return await request<Tournament>(`/t/${slug}`, undefined, fetchFn);
 }
 
-export function getPublicMatches(slug: string, fetchFn = fetch) {
-	return request<PaginatedMatches>(`/t/${slug}/matches`, undefined, fetchFn);
+export async function getPublicMatches(
+	slug: string,
+	page = 1,
+	limit = 50,
+	fetchFn = fetch
+): Promise<PaginatedMatches> {
+	return await request<PaginatedMatches>(
+		`/t/${slug}/matches?page=${page}&limit=${limit}`,
+		undefined,
+		fetchFn
+	);
 }
 
-export function apiLogout(fetchFn = fetch) {
-	return request<null>('/auth/logout', { method: 'POST' }, fetchFn);
+export async function apiLogout(fetchFn = fetch): Promise<null> {
+	return await request<null>('/auth/logout', { method: 'POST' }, fetchFn);
 }

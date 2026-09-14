@@ -26,11 +26,14 @@ export async function createTournament(
 	ownerId: string,
 	data: { name: string; sport: string; format?: string }
 ) {
-	const name = data.name?.trim();
+	const name = data.name?.trim() ?? '';
 	if (!name) {
 		throw new TournamentError('Tournament name is required', 'VALIDATION_ERROR', 400);
 	}
-	const sport = data.sport?.trim();
+	if (name.length > 100) {
+		throw new TournamentError('Nama turnamen maksimal 100 karakter', 'VALIDATION_ERROR', 400);
+	}
+	const sport = data.sport?.trim() ?? '';
 	if (!sport) {
 		throw new TournamentError('Sport is required', 'VALIDATION_ERROR', 400);
 	}
@@ -90,9 +93,12 @@ export async function getTournament(id: string, ownerId: string) {
 }
 
 export async function addTeam(tournamentId: string, ownerId: string, name: string) {
-	const tName = name?.trim();
+	const tName = name?.trim() ?? '';
 	if (!tName) {
 		throw new TournamentError('Team name is required', 'VALIDATION_ERROR', 400);
+	}
+	if (tName.length > 50) {
+		throw new TournamentError('Nama tim maksimal 50 karakter', 'VALIDATION_ERROR', 400);
 	}
 	const tournament = await prisma.tournament.findFirst({
 		where: { id: tournamentId, ownerId }

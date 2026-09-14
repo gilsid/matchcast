@@ -4,13 +4,13 @@ import { DomainError } from './errors';
 
 export class BracketError extends DomainError {}
 
-export function nextPowerOf2(n: number): number {
+function nextPowerOf2(n: number): number {
 	let p = 1;
 	while (p < n) p <<= 1;
 	return p;
 }
 
-export function shuffleArray<T>(array: T[]): T[] {
+function shuffleArray<T>(array: T[]): T[] {
 	const arr = [...array];
 	for (let i = arr.length - 1; i > 0; i--) {
 		const j = Math.floor(Math.random() * (i + 1));
@@ -93,17 +93,16 @@ function generateRoundMatches(
 	return { matches, matchOrderEnd: matchOrder };
 }
 
-// Exported for testing.
-export function planBracketMatches(
-	seeds: TeamWithSeed[],
-	round1Matches: number,
-	byes: number,
-	totalRounds: number
-): RoundMatch[] {
+export function planBracketMatches(seeds: TeamWithSeed[]): RoundMatch[] {
+	const n = seeds.length;
+	const P = nextPowerOf2(n);
+	const byes = P - n;
+	const round1Matches = (n - byes) / 2;
+	const totalRounds = Math.log2(P);
 	const matches: RoundMatch[] = [];
 	let matchOrder = 1;
 
-	// Round 1
+	// Round 1. Seeds 1..byes skip to round 2; the rest play here.
 	for (let i = 0; i < round1Matches; i++) {
 		matches.push({
 			round: 1,
@@ -149,22 +148,8 @@ export async function generateBracket(tournamentId: string, ownerId: string) {
 			seed: i + 1
 		}));
 
-		const n = teamsWithSeed.length;
-		const P = nextPowerOf2(n);
-		const byes = P - n;
-
-		// Teams with seeds 1..byes get bye to round 2
-		// Teams with seeds byes+1..n play in round 1
-		const round1Teams = teamsWithSeed.slice(byes);
-		const totalRounds = Math.log2(P);
-
 		// Plan all matches for every round
-		const matchesToCreate = planBracketMatches(
-			teamsWithSeed,
-			round1Teams.length / 2,
-			byes,
-			totalRounds
-		);
+		const matchesToCreate = planBracketMatches(teamsWithSeed);
 
 		// Create all matches in a transaction (atomic lock + match creation + seed persist)
 		return await prisma.$transaction(async (tx) => {
@@ -270,6 +255,10 @@ export async function updateMatchScore(
 
 		if (match.tournament.ownerId !== ownerId) {
 			throw new BracketError('Not authorized', 'UNAUTHORIZED', 403);
+		}
+
+		if (!Number.isInteger(homeScore) || !Number.isInteger(awayScore)) {
+			throw new BracketError('Scores must be integers', 'VALIDATION_ERROR', 400);
 		}
 
 		if (homeScore < 0 || awayScore < 0) {
@@ -396,6 +385,8 @@ async function propagateWinner(
 }
 
 export async function getPublicMatches(slug: string, page = 1, limit = 50) {
+	page = Math.max(1, Math.floor(page) || 1);
+	limit = Math.min(100, Math.max(1, Math.floor(limit) || 50));
 	const tournament = await prisma.tournament.findUnique({
 		where: { slug },
 		select: { id: true, status: true }

@@ -6,10 +6,9 @@
 		deleteTeam,
 		generateBracket,
 		startMatch,
-		updateMatchScore,
-		type Tournament,
-		type Match
+		updateMatchScore
 	} from '$lib/api/tournament';
+	import type { Match, Tournament } from '$lib/types';
 	import ScoreModal from '$lib/components/ui/score-modal.svelte';
 	import Bracket from '$lib/components/ui/bracket.svelte';
 

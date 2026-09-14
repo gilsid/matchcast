@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { createTournament, apiLogout } from '$lib/api/tournament';
-	import type { Tournament } from '$lib/api/tournament';
+	import type { Tournament } from '$lib/types';
 	import { invalidateAll, goto } from '$app/navigation';
 
 	let { data }: { data: { tournaments: Tournament[] } } = $props();

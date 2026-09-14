@@ -1,8 +1,5 @@
-import type { ApiSuccess } from '$lib/types';
+import { request } from './request';
 
-export async function getHealth(): Promise<{ status: string }> {
-	const res = await fetch('/api/health');
-	const data = (await res.json()) as ApiSuccess<{ status: string }>;
-	if (!data.success) throw new Error('Health check failed');
-	return data.data;
+export async function getHealth(fetchFn = fetch): Promise<{ status: string }> {
+	return await request<{ status: string }>('/health', undefined, fetchFn);
 }
