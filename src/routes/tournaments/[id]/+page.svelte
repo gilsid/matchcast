@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import {
 		addTeam,
 		deleteTeam,
@@ -18,8 +19,8 @@
 		data: { tournament: Tournament };
 	} = $props();
 
-	// svelte-ignore state_referenced_locally — intentional seed from SSR, updated via reloadTournament
-	let tournament = $state<Tournament>(data.tournament);
+	let refreshed = $state<Tournament | null>(null);
+	let tournament = $derived(refreshed ?? data.tournament);
 	let pageError = $state('');
 
 	let teamName = $state('');
@@ -34,7 +35,7 @@
 
 	async function reloadTournament() {
 		const { getTournament } = await import('$lib/api/tournament');
-		tournament = await getTournament(page.params.id!);
+		refreshed = await getTournament(page.params.id!);
 	}
 
 	async function handleAdd(e: Event) {
@@ -95,7 +96,7 @@
 <div class="mx-auto min-h-screen max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
 	<button
 		class="text-text-muted font-mono text-xs uppercase tracking-wider hover:text-accent-primary"
-		onclick={() => goto('/dashboard')}
+		onclick={() => goto(resolve('/dashboard'))}
 	>
 		&larr; Kembali ke Dashboard
 	</button>
@@ -147,7 +148,7 @@
 
 			{#if tournament.teams && tournament.teams.length > 0}
 				<div class="mt-4 space-y-2">
-					{#each tournament.teams as team}
+					{#each tournament.teams as team (team.id)}
 						<div
 							class="bg-bg-surface clipped-sm border border-border-subtle flex items-center justify-between p-3"
 						>

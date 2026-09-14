@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { createTournament, apiLogout } from '$lib/api/tournament';
 	import type { Tournament } from '$lib/types';
-	import { invalidateAll, goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
+	import { resolve } from '$app/paths';
 
 	let { data }: { data: { tournaments: Tournament[] } } = $props();
 
@@ -16,8 +17,10 @@
 	async function handleLogout() {
 		try {
 			await apiLogout();
-			goto('/login');
-		} catch {}
+			await goto(resolve('/login'));
+		} catch {
+			// Logout failed server-side; user stays put with no visible change.
+		}
 	}
 
 	async function handleCreate(e: Event) {
@@ -103,8 +106,8 @@
 			<p class="text-text-muted font-mono text-xs">Belum ada turnamen.</p>
 		{:else}
 			<div class="grid gap-3">
-				{#each tournaments as t}
-					<a href={`/tournaments/${t.id}`} class="block w-full text-left">
+				{#each tournaments as t (t.id)}
+					<a href={resolve('/tournaments/[id]', { id: t.id })} class="block w-full text-left">
 						<div
 							class="bg-bg-surface clipped border border-border-subtle p-4 transition-colors hover:border-accent-primary/50"
 						>

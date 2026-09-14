@@ -21,7 +21,7 @@
 </script>
 
 <div class="bracket-grid {clazz}">
-	{#each roundGroups as [round, ms], ri}
+	{#each roundGroups as [round, ms] (round)}
 		<div class="bracket-col">
 			<div class="bg-bg-surface clipped-sm inline-block border border-border-subtle mb-3 px-3 py-1">
 				<span class="font-mono text-text-muted text-xs uppercase tracking-wider">Babak {round}</span
@@ -29,7 +29,7 @@
 			</div>
 
 			<div class="bracket-matches">
-				{#each ms as match, mi}
+				{#each ms as match (match.id)}
 					<div class="bracket-match" class:played={match.winnerTeamId !== null}>
 						<!-- connector from previous round -->
 						{#if round > 1}
