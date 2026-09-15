@@ -29,6 +29,7 @@ Thumbs.db
 
 # Agent temp data
 .pi-subagents/
+.playwright-mcp/
 
 # Playwright
 test-results/

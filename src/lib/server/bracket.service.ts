@@ -1,5 +1,5 @@
 import { prisma } from './db';
-import type { Prisma } from '../generated/prisma/client';
+import { Prisma } from '../generated/prisma/client';
 import { DomainError } from './errors';
 
 export class BracketError extends DomainError {}
@@ -151,29 +151,34 @@ export async function generateBracket(tournamentId: string, ownerId: string) {
 		// Plan all matches for every round
 		const matchesToCreate = planBracketMatches(teamsWithSeed);
 
-		// Create all matches in a transaction (atomic lock + match creation + seed persist)
-		return await prisma.$transaction(async (tx) => {
-			// Atomic lock: update status hanya jika masih "draft"
-			const locked = await tx.tournament.updateMany({
-				where: { id: tournamentId, status: 'draft' },
-				data: { status: 'ongoing' }
-			});
-			if (locked.count === 0) {
-				throw new BracketError(
-					'Bracket already generated or tournament not in draft status',
-					'BRACKET_EXISTS',
-					409
-				);
-			}
-
-			// Persist computed seeds
-			await Promise.all(
-				teamsWithSeed.map((t) => tx.team.update({ where: { id: t.id }, data: { seed: t.seed } }))
+		// Neon HTTP supports neither interactive tx, updateMany, nor
+		// create-with-include, so the locks here use guarded raw UPDATEs
+		// (single statements stay atomic). First lock wins, losers see zero
+		// rows and get a 409/400 — same contract the race tests assert.
+		// Atomic lock: update status hanya jika masih "draft"
+		const locked = await prisma.$queryRaw<{ id: string }[]>`
+			UPDATE "Tournament" SET status = 'ongoing', "updatedAt" = NOW()
+			WHERE id = ${tournamentId} AND status = 'draft'
+			RETURNING id`;
+		if (locked.length === 0) {
+			throw new BracketError(
+				'Bracket already generated or tournament not in draft status',
+				'BRACKET_EXISTS',
+				409
 			);
+		}
 
-			const created = await Promise.all(
+		// Persist computed seeds
+		await Promise.all(
+			teamsWithSeed.map((t) => prisma.team.update({ where: { id: t.id }, data: { seed: t.seed } }))
+		);
+
+		try {
+			// Plain creates, no include: Neon HTTP runs create+include in an
+			// implicit tx, which it does not support. Relations re-read below.
+			await Promise.all(
 				matchesToCreate.map((m) =>
-					tx.match.create({
+					prisma.match.create({
 						data: {
 							tournamentId,
 							round: m.round,
@@ -181,13 +186,26 @@ export async function generateBracket(tournamentId: string, ownerId: string) {
 							homeTeamId: m.homeTeamId,
 							awayTeamId: m.awayTeamId,
 							status: m.status
-						},
-						include: { homeTeam: true, awayTeam: true }
+						}
 					})
 				)
 			);
-			return created;
-		});
+			return prisma.match.findMany({
+				where: { tournamentId },
+				orderBy: [{ round: 'asc' }, { matchOrder: 'asc' }],
+				include: { homeTeam: true, awayTeam: true }
+			});
+		} catch (err) {
+			// Lost the race: another request claimed these slots first.
+			if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+				throw new BracketError(
+					'Bracket already generated or tournament not in draft status',
+					'BRACKET_EXISTS',
+					409
+				);
+			}
+			throw err;
+		}
 	} catch (err) {
 		if (err instanceof DomainError) throw err;
 		throw new BracketError('Internal error generating bracket', 'INTERNAL_ERROR', 500);
@@ -218,11 +236,11 @@ export async function startMatch(matchId: string, ownerId: string) {
 		}
 
 		// Atomic update: hanya jika status masih "scheduled" — mencegah race condition
-		const updated = await prisma.match.updateMany({
-			where: { id: matchId, status: 'scheduled' },
-			data: { status: 'ongoing' }
-		});
-		if (updated.count === 0) {
+		const updated = await prisma.$queryRaw<{ id: string }[]>`
+			UPDATE "Match" SET status = 'ongoing'
+			WHERE id = ${matchId} AND status = 'scheduled'
+			RETURNING id`;
+		if (updated.length === 0) {
 			throw new BracketError('Match already started or finished', 'INVALID_STATUS', 400);
 		}
 
@@ -274,48 +292,42 @@ export async function updateMatchScore(
 			throw new BracketError('Cannot determine winner: missing team', 'MISSING_TEAM', 400);
 		}
 
-		// Atomic score update + propagate + tournament-finish in single transaction
-		const [updatedMatch] = await prisma.$transaction(async (tx) => {
-			const updatedBatch = await tx.match.updateMany({
-				where: { id: matchId, status: 'ongoing' },
-				data: {
-					homeScore,
-					awayScore,
-					winnerTeamId,
-					status: 'finished'
-				}
-			});
-			if (updatedBatch.count === 0) {
-				throw new BracketError('Match already finished', 'ALREADY_FINISHED', 400);
-			}
+		// Guarded single-statement score write (Neon-safe race lock): exactly
+		// one concurrent scorer flips ongoing->finished, the rest see zero
+		// rows and get a 400.
+		const scored = await prisma.$queryRaw<{ id: string }[]>`
+			UPDATE "Match" SET "homeScore" = ${homeScore}, "awayScore" = ${awayScore},
+				"winnerTeamId" = ${winnerTeamId}, status = 'finished'
+			WHERE id = ${matchId} AND status = 'ongoing'
+			RETURNING id`;
+		if (scored.length === 0) {
+			throw new BracketError('Match already finished', 'ALREADY_FINISHED', 400);
+		}
 
-			const updated = await tx.match.findUnique({
-				where: { id: matchId },
-				include: { homeTeam: true, awayTeam: true, winnerTeam: true }
-			});
-			if (!updated) {
-				throw new BracketError('Match not found', 'NOT_FOUND', 404);
-			}
-
-			// Propagate winner to next round
-			await propagateWinner(tx, match, winnerTeamId);
-
-			// Check if tournament is finished (final match done)
-			const finalMatch = await tx.match.findFirst({
-				where: { tournamentId: match.tournamentId },
-				orderBy: { round: 'desc' }
-			});
-			if (finalMatch && finalMatch.status === 'finished') {
-				await tx.tournament.update({
-					where: { id: match.tournamentId },
-					data: { status: 'finished' }
-				});
-			}
-
-			return [updated];
+		const updated = await prisma.match.findUnique({
+			where: { id: matchId },
+			include: { homeTeam: true, awayTeam: true, winnerTeam: true }
 		});
+		if (!updated) {
+			throw new BracketError('Match not found', 'NOT_FOUND', 404);
+		}
 
-		return updatedMatch;
+		// Propagate winner to next round
+		await propagateWinner(match, winnerTeamId);
+
+		// Check if tournament is finished (final match done)
+		const finalMatch = await prisma.match.findFirst({
+			where: { tournamentId: match.tournamentId },
+			orderBy: { round: 'desc' }
+		});
+		if (finalMatch && finalMatch.status === 'finished') {
+			await prisma.tournament.update({
+				where: { id: match.tournamentId },
+				data: { status: 'finished' }
+			});
+		}
+
+		return updated;
 	} catch (err) {
 		if (err instanceof DomainError) throw err;
 		throw new BracketError('Internal error updating score', 'INTERNAL_ERROR', 500);
@@ -323,7 +335,6 @@ export async function updateMatchScore(
 }
 
 async function propagateWinner(
-	tx: Prisma.TransactionClient,
 	match: { tournamentId: string; round: number; matchOrder: number },
 	winnerTeamId: string
 ) {
@@ -331,7 +342,7 @@ async function propagateWinner(
 	const nextMatchOrder = Math.ceil(match.matchOrder / 2);
 	const isHome = match.matchOrder % 2 === 1;
 
-	const nextMatch = await tx.match.findFirst({
+	const nextMatch = await prisma.match.findFirst({
 		where: {
 			tournamentId: match.tournamentId,
 			round: nextRound,
@@ -344,12 +355,12 @@ async function propagateWinner(
 	if (isHome) {
 		// Winner goes to home slot if empty, else away
 		if (nextMatch.homeTeamId === null) {
-			await tx.match.update({
+			await prisma.match.update({
 				where: { id: nextMatch.id },
 				data: { homeTeamId: winnerTeamId }
 			});
 		} else if (nextMatch.awayTeamId === null) {
-			await tx.match.update({
+			await prisma.match.update({
 				where: { id: nextMatch.id },
 				data: { awayTeamId: winnerTeamId }
 			});
@@ -363,12 +374,12 @@ async function propagateWinner(
 	} else {
 		// Winner goes to away slot if empty, else home
 		if (nextMatch.awayTeamId === null) {
-			await tx.match.update({
+			await prisma.match.update({
 				where: { id: nextMatch.id },
 				data: { awayTeamId: winnerTeamId }
 			});
 		} else if (nextMatch.homeTeamId === null) {
-			await tx.match.update({
+			await prisma.match.update({
 				where: { id: nextMatch.id },
 				data: { homeTeamId: winnerTeamId }
 			});
