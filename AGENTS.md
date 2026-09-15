@@ -161,11 +161,11 @@ bunx prisma migrate deploy # migrasi schema (prod/CI)
 bunx prisma studio        # GUI database
 ```
 
-Test API butuh Postgres jalan + migrasi applied:
+Test API butuh Postgres jalan + migrasi applied. `.env` cukup, tanpa
+export manual (`db.ts` load `.env` via `dotenv/config`, dotenv sudah
+ikut transitif via prisma). Vercel unaffected, platform vars menang.
 
 ```bash
-export DATABASE_URL="postgresql://user:pass@localhost:5432/db"
-export JWT_SECRET="local-dev-secret"
 bunx prisma migrate deploy
 bun run test
 ```
@@ -186,12 +186,15 @@ bun run test
 
 ## 10. Prisma Atomic Patterns
 
-- **updateMany with where guard:** `updateMany({ where: { id, status: "X" },
-data: { status: "Y" } })` — race-safe.
-- **$transaction for multi-step:** score + propagateWinner + finish check in
-  one `$transaction`; pass`tx: Prisma.TransactionClient`.
-- **TransactionClient type:**
-  `import type { Prisma } from "../generated/prisma/client"`.
+- **Neon HTTP larangan:** tanpa interactive `$transaction`, tanpa `updateMany`,
+  tanpa create-with-include (implicit tx). Semua lempar
+  "Transactions are not supported in HTTP mode".
+- **Guarded raw UPDATE:** lock status via single statement, first writer wins:
+  `UPDATE "Match" SET status='ongoing' WHERE id=${id} AND status='scheduled'
+RETURNING id` — rows 0 = kalah race (409/400, kontrak race test sama).
+- **Plain create + re-read:** `match.create` tanpa include (Promise.all ok),
+  relasi baca ulang via `findMany include homeTeam,awayTeam`.
+- **P2002 = kalah race:** create tabrakan unique → map ke 409 BRACKET_EXISTS.
 - **Neon driver:** URL mengandung `neon.tech` → `PrismaNeonHttp`; selain itu
   `PrismaPg` Pool (lokal). Lihat `lib/server/db.ts`.
 - **Match state machine:** `scheduled → ongoing → finished`. Score gate on
